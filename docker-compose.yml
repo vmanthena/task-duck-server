@@ -1,0 +1,23 @@
+services:
+  task-duck:
+    # For local build:
+    # build: .
+    # For GHCR (replace with your repo):
+    image: ghcr.io/vmanthena/task-duck-server:latest
+    container_name: task-duck
+    restart: unless-stopped
+    ports:
+      - "3456:3000"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - task-duck-net
+
+networks:
+  task-duck-net:
+    driver: bridge

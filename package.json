@@ -1,0 +1,14 @@
+{
+  "name": "task-duck-server",
+  "version": "3.0.0",
+  "description": "Task Duck — AI-powered scope discipline tool",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}

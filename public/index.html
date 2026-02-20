@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🦆 Task Duck — Stay in Scope</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface-hover: #222633;
+    --border: #2a2e3b;
+    --yellow: #f5c542;
+    --yellow-dim: #f5c54233;
+    --yellow-glow: #f5c54266;
+    --red: #e85d5d;
+    --red-dim: #e85d5d22;
+    --green: #4ecb71;
+    --green-dim: #4ecb7122;
+    --blue: #5b9cf5;
+    --blue-dim: #5b9cf522;
+    --orange: #e8943d;
+    --orange-dim: #e8943d22;
+    --purple: #a78bfa;
+    --purple-dim: #a78bfa22;
+    --text: #e8e6e1;
+    --text-dim: #8b8a87;
+    --text-muted: #5a5957;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Outfit', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.15;
+    z-index: -1;
+  }
+  .app { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 2rem; animation: fadeDown 0.6s ease; }
+  .header h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.2rem; }
+  .header h1 span { color: var(--yellow); }
+  .header p { color: var(--text-dim); font-size: 0.9rem; font-weight: 300; }
+  .header .shortcuts-hint {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+  }
+  .header .shortcuts-hint kbd {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+  }
+
+  /* Duck Zone */
+  .duck-zone {
+    display: flex; align-items: flex-start; gap: 1.25rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.25rem; margin-bottom: 2rem;
+    animation: fadeUp 0.5s ease 0.1s both; position: relative; overflow: hidden;
+  }
+  .duck-zone::after {
+    content: ''; position: absolute; top: -50%; right: -30%; width: 300px; height: 300px;
+    background: radial-gradient(circle, var(--yellow-dim) 0%, transparent 70%); pointer-events: none;
+  }
+  .duck-avatar {
+    flex-shrink: 0; width: 72px; height: 72px; background: var(--yellow-dim);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 2.4rem; cursor: pointer; transition: transform 0.3s, box-shadow 0.3s;
+    position: relative; z-index: 1; user-select: none;
+  }
+  .duck-avatar:hover { transform: scale(1.1) rotate(-5deg); box-shadow: 0 0 20px var(--yellow-glow); }
+  .duck-avatar.quack { animation: quack 0.4s ease; }
+  .duck-speech { flex: 1; position: relative; z-index: 1; }
+  .duck-speech .label {
+    font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--yellow); margin-bottom: 0.35rem;
+  }
+  .duck-speech p { font-size: 0.95rem; line-height: 1.55; }
+
+  /* Steps */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step { animation: fadeUp 0.5s ease both; }
+  .step:nth-child(1) { animation-delay: 0.15s; }
+  .step:nth-child(2) { animation-delay: 0.2s; }
+  .step:nth-child(3) { animation-delay: 0.25s; }
+  .step:nth-child(4) { animation-delay: 0.3s; }
+
+  .step-header {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.85rem 0; cursor: pointer; user-select: none;
+  }
+  .step-number {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 0.8rem; font-weight: 500;
+    border: 2px solid var(--border); color: var(--text-dim);
+    flex-shrink: 0; transition: all 0.3s;
+  }
+  .step.active .step-number { border-color: var(--yellow); color: var(--yellow); box-shadow: 0 0 12px var(--yellow-dim); }
+  .step.completed .step-number { border-color: var(--green); background: var(--green); color: var(--bg); }
+  .step.completed .step-number::after { content: '✓'; font-size: 0.75rem; }
+  .step.completed .step-number span { display: none; }
+  .step-title { font-size: 1rem; font-weight: 600; }
+  .step-tag {
+    font-family: var(--mono); font-size: 0.6rem; text-transform: uppercase;
+    letter-spacing: 0.08em; padding: 0.15rem 0.45rem; border-radius: 4px;
+    margin-left: auto; flex-shrink: 0;
+  }
+
+  .step-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    opacity: 0; padding-left: 3rem;
+  }
+  .step.active .step-body { max-height: 2000px; opacity: 1; }
+  .step-connector { width: 2px; height: 16px; background: var(--border); margin-left: 16px; transition: background 0.3s; }
+  .step.completed + .step-connector { background: var(--green); }
+
+  /* Form */
+  .field { margin-bottom: 0.85rem; }
+  .field label {
+    display: block; font-family: var(--mono); font-size: 0.68rem;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-dim); margin-bottom: 0.35rem;
+  }
+  .field textarea, .field input[type="text"], .field input[type="number"] {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.7rem 0.9rem; color: var(--text);
+    font-family: var(--sans); font-size: 0.88rem; line-height: 1.5;
+    resize: vertical; transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+  }
+  .field textarea:focus, .field input:focus { border-color: var(--yellow); box-shadow: 0 0 0 3px var(--yellow-dim); }
+  .field textarea { min-height: 70px; }
+  .field textarea.short { min-height: 48px; resize: none; }
+  .field textarea.tall { min-height: 110px; }
+  .field-row { display: grid; grid-template-columns: 1fr 2fr; gap: 0.7rem; }
+  .field-row-3 { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 0.7rem; }
+
+  /* Side by side compare */
+  .compare-zone {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
+    margin-bottom: 0.85rem;
+  }
+  .compare-zone .compare-col label {
+    display: flex; align-items: center; gap: 0.35rem;
+  }
+  .compare-zone .compare-col .badge {
+    font-size: 0.55rem; padding: 0.1rem 0.3rem; border-radius: 3px;
+    text-transform: uppercase; font-weight: 600;
+  }
+  .badge-original { background: var(--blue-dim); color: var(--blue); }
+  .badge-yours { background: var(--green-dim); color: var(--green); }
+
+  /* Scope items */
+  .scope-list { display: flex; flex-direction: column; gap: 0.45rem; }
+  .scope-item { display: flex; align-items: center; gap: 0.5rem; }
+  .scope-item input[type="text"] {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.55rem 0.8rem; color: var(--text);
+    font-family: var(--sans); font-size: 0.85rem; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .scope-item input[type="text"]:focus { border-color: var(--yellow); box-shadow: 0 0 0 3px var(--yellow-dim); }
+  .scope-item input[type="number"] {
+    width: 65px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.55rem 0.5rem; color: var(--orange);
+    font-family: var(--mono); font-size: 0.8rem; outline: none;
+    text-align: center; transition: border-color 0.2s;
+  }
+  .scope-item input[type="number"]:focus { border-color: var(--orange); }
+  .scope-item .remove-btn {
+    width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem; transition: all 0.2s;
+  }
+  .scope-item .remove-btn:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+  .scope-item .time-label { font-family: var(--mono); font-size: 0.6rem; color: var(--text-muted); }
+
+  .add-scope-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: transparent; border: 1px dashed var(--border);
+    border-radius: 8px; padding: 0.45rem 0.8rem; color: var(--text-dim);
+    font-family: var(--sans); font-size: 0.82rem; cursor: pointer; transition: all 0.2s;
+    margin-top: 0.2rem;
+  }
+  .add-scope-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+
+  /* Time summary bar */
+  .time-summary {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin-top: 0.6rem; padding: 0.6rem 0.85rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; font-family: var(--mono); font-size: 0.78rem;
+  }
+  .time-summary .ts-label { color: var(--text-dim); }
+  .time-summary .ts-value { color: var(--orange); font-weight: 500; }
+  .time-summary .ts-warn { color: var(--red); font-weight: 500; }
+  .time-summary .ts-ok { color: var(--green); font-weight: 500; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.6rem 1.2rem; border-radius: 10px; font-family: var(--sans);
+    font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; border: none;
+  }
+  .btn-primary { background: var(--yellow); color: var(--bg); }
+  .btn-primary:hover { box-shadow: 0 0 20px var(--yellow-glow); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+  .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+  .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.78rem; border-radius: 8px; }
+  .step-actions { display: flex; gap: 0.65rem; margin-top: 0.65rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+
+  /* Check questions */
+  .check-questions { display: flex; flex-direction: column; gap: 0.6rem; }
+  .check-q {
+    display: flex; align-items: flex-start; gap: 0.7rem;
+    padding: 0.75rem 0.9rem; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 10px;
+    cursor: pointer; transition: all 0.2s; user-select: none;
+  }
+  .check-q:hover { border-color: var(--text-muted); }
+  .check-q.checked { border-color: var(--green); background: var(--green-dim); }
+  .check-q .checkbox {
+    width: 20px; height: 20px; border-radius: 5px;
+    border: 2px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; transition: all 0.2s; margin-top: 1px;
+  }
+  .check-q.checked .checkbox { border-color: var(--green); background: var(--green); color: var(--bg); }
+  .check-q .check-text { font-size: 0.85rem; line-height: 1.4; color: var(--text-dim); }
+  .check-q.checked .check-text { color: var(--text); }
+
+  /* Peer impact section */
+  .peer-section {
+    margin-top: 0.85rem; padding: 0.85rem;
+    background: var(--purple-dim); border: 1px solid var(--purple);
+    border-radius: 10px;
+  }
+  .peer-section label { color: var(--purple) !important; }
+
+  /* Diff tracker */
+  .diff-section {
+    margin-top: 0.85rem; padding: 0.85rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .diff-section h4 {
+    font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem;
+    color: var(--orange);
+  }
+  .diff-item {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.35rem 0; font-size: 0.82rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .diff-item:last-child { border-bottom: none; }
+  .diff-planned { color: var(--text-dim); flex: 1; }
+  .diff-status {
+    font-family: var(--mono); font-size: 0.7rem; padding: 0.1rem 0.4rem;
+    border-radius: 3px; cursor: pointer; user-select: none; transition: all 0.2s;
+  }
+  .diff-done { background: var(--green-dim); color: var(--green); }
+  .diff-skipped { background: var(--red-dim); color: var(--red); }
+  .diff-extra { background: var(--orange-dim); color: var(--orange); }
+  .diff-add-extra {
+    margin-top: 0.5rem; display: flex; gap: 0.4rem;
+  }
+  .diff-add-extra input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.4rem 0.6rem; color: var(--text);
+    font-family: var(--sans); font-size: 0.8rem; outline: none;
+  }
+
+  /* Completion */
+  .completion {
+    text-align: center; padding: 2rem 1rem;
+    animation: fadeUp 0.5s ease; display: none;
+  }
+  .completion.visible { display: block; }
+  .completion .big-duck { font-size: 3.5rem; margin-bottom: 0.75rem; animation: float 2s ease-in-out infinite; }
+  .completion h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--green); }
+  .completion p { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1.25rem; }
+  .completion-actions { display: flex; gap: 0.65rem; justify-content: center; flex-wrap: wrap; }
+
+  /* Accuracy score */
+  .accuracy-card {
+    display: inline-flex; flex-direction: column; align-items: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1.25rem;
+  }
+  .accuracy-card .acc-label { font-family: var(--mono); font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+  .accuracy-card .acc-score { font-size: 2rem; font-weight: 800; margin: 0.2rem 0; }
+  .accuracy-card .acc-detail { font-size: 0.78rem; color: var(--text-dim); }
+
+  /* Checkpoint Timer Modal */
+  .checkpoint-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 500; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .checkpoint-overlay.show { opacity: 1; pointer-events: all; }
+  .checkpoint-modal {
+    background: var(--surface); border: 2px solid var(--yellow);
+    border-radius: 18px; padding: 2rem; text-align: center;
+    max-width: 380px; width: 90%;
+    box-shadow: 0 0 40px var(--yellow-glow);
+    animation: modalBounce 0.4s ease;
+  }
+  .checkpoint-modal .cm-duck { font-size: 3rem; margin-bottom: 0.5rem; }
+  .checkpoint-modal h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--yellow); }
+  .checkpoint-modal p { font-size: 0.88rem; color: var(--text-dim); margin-bottom: 1rem; line-height: 1.5; }
+  .checkpoint-modal .cm-scope {
+    text-align: left; background: var(--bg); border-radius: 8px;
+    padding: 0.65rem 0.85rem; margin-bottom: 1rem; font-size: 0.8rem;
+  }
+  .checkpoint-modal .cm-scope li { margin-bottom: 0.25rem; color: var(--text); list-style: none; }
+  .checkpoint-modal .cm-scope li::before { content: '→ '; color: var(--yellow); }
+  .checkpoint-modal .cm-actions { display: flex; gap: 0.5rem; justify-content: center; }
+
+  /* Creep alert */
+  .creep-alert {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: var(--surface); border: 1px solid var(--red);
+    border-radius: 14px; padding: 0.85rem 1.1rem;
+    display: flex; align-items: center; gap: 0.65rem;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4); z-index: 100;
+    transform: translateY(120%); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 320px;
+  }
+  .creep-alert.show { transform: translateY(0); }
+  .creep-alert .duck-mini { font-size: 1.6rem; flex-shrink: 0; }
+  .creep-alert p { font-size: 0.8rem; line-height: 1.4; }
+  .creep-alert .dismiss {
+    position: absolute; top: 0.4rem; right: 0.55rem;
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 0.85rem;
+  }
+
+  /* Timer display (floating) */
+  .work-timer {
+    position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.35rem 0.85rem;
+    font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim);
+    z-index: 50; display: none; gap: 0.5rem; align-items: center;
+    transition: all 0.3s;
+  }
+  .work-timer.active { display: flex; }
+  .work-timer .wt-time { color: var(--orange); font-weight: 500; }
+  .work-timer .wt-btn {
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 0.75rem; padding: 0 0.2rem;
+  }
+  .work-timer .wt-btn:hover { color: var(--yellow); }
+
+  /* History panel */
+  .history-toggle {
+    position: fixed; top: 1rem; right: 1rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.45rem 0.75rem;
+    color: var(--text-dim); font-family: var(--mono); font-size: 0.7rem;
+    cursor: pointer; z-index: 50; transition: all 0.2s;
+  }
+  .history-toggle:hover { border-color: var(--yellow); color: var(--yellow); }
+  .history-panel {
+    position: fixed; top: 0; right: -400px; width: 380px; height: 100vh;
+    background: var(--surface); border-left: 1px solid var(--border);
+    z-index: 200; transition: right 0.35s ease;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .history-panel.open { right: 0; }
+  .history-panel-header {
+    padding: 1.1rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .history-panel-header h3 { font-size: 0.95rem; font-weight: 600; }
+  .history-panel-header button { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 1.1rem; }
+  .history-list { flex: 1; overflow-y: auto; padding: 0.85rem; }
+  .history-item {
+    padding: 0.75rem; border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 0.65rem; transition: all 0.2s;
+  }
+  .history-item:hover { border-color: var(--text-muted); }
+  .history-item .hi-task { font-size: 0.82rem; font-weight: 500; margin-bottom: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-item .hi-id { font-family: var(--mono); font-size: 0.65rem; color: var(--yellow); margin-bottom: 0.15rem; }
+  .history-item .hi-meta { display: flex; gap: 0.75rem; align-items: center; }
+  .history-item .hi-date { font-family: var(--mono); font-size: 0.63rem; color: var(--text-muted); }
+  .history-item .hi-accuracy { font-family: var(--mono); font-size: 0.63rem; }
+  .history-item .hi-actions { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
+  .history-item .hi-actions button {
+    font-family: var(--mono); font-size: 0.6rem; padding: 0.2rem 0.4rem;
+    border-radius: 4px; border: 1px solid var(--border); background: transparent;
+    color: var(--text-dim); cursor: pointer; transition: all 0.2s;
+  }
+  .history-item .hi-actions button:hover { border-color: var(--yellow); color: var(--yellow); }
+  .history-empty { text-align: center; color: var(--text-muted); font-size: 0.82rem; padding: 2rem; }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 150; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .overlay.show { opacity: 1; pointer-events: all; }
+
+  /* Markdown modal */
+  .md-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 300; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .md-overlay.show { opacity: 1; pointer-events: all; }
+  .md-modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.5rem; max-width: 600px; width: 90%;
+    max-height: 80vh; display: flex; flex-direction: column;
+  }
+  .md-modal h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; }
+  .md-modal textarea {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.75rem; color: var(--green);
+    font-family: var(--mono); font-size: 0.75rem; line-height: 1.5;
+    resize: none; min-height: 300px; outline: none;
+  }
+  .md-modal .md-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; justify-content: flex-end; }
+
+  /* Gear section */
+  .gear-section { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); animation: fadeUp 0.5s ease 0.4s both; }
+  .gear-section h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.2rem; }
+  .gear-section .gear-subtitle { color: var(--text-dim); font-size: 0.82rem; margin-bottom: 1rem; }
+  .gear-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+  .gear-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.1rem; transition: all 0.2s;
+  }
+  .gear-card:hover { border-color: var(--text-muted); }
+  .gear-card .gc-emoji { font-size: 1.6rem; margin-bottom: 0.45rem; }
+  .gear-card .gc-name { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.15rem; }
+  .gear-card .gc-desc { font-size: 0.75rem; color: var(--text-dim); line-height: 1.4; margin-bottom: 0.45rem; }
+  .gear-card .gc-price { font-family: var(--mono); font-size: 0.8rem; color: var(--green); margin-bottom: 0.45rem; }
+  .gear-card a { font-family: var(--mono); font-size: 0.68rem; color: var(--yellow); text-decoration: none; border-bottom: 1px dashed var(--yellow-dim); }
+  .gear-card a:hover { border-bottom-color: var(--yellow); }
+  .gear-total { text-align: right; margin-top: 0.75rem; font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim); }
+  .gear-total strong { color: var(--green); font-size: 0.9rem; }
+
+  /* Print styles */
+  @media print {
+    * { color: #000 !important; background: #fff !important; box-shadow: none !important; }
+    body::before { display: none; }
+    .app, .duck-zone, .steps, .step, .step-body, .step-header,
+    .gear-section, .history-toggle, .history-panel, .overlay,
+    .creep-alert, .completion, .btn, .add-scope-btn, .remove-btn,
+    .step-actions, .step-tag, .step-number, .step-connector,
+    .duck-avatar, .duck-speech, .work-timer, .checkpoint-overlay,
+    .md-overlay { display: none !important; }
+    #printSheet { display: block !important; width: 100%; padding: 0; margin: 0; font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #000; }
+    @page { size: letter; margin: 0.6in 0.65in; }
+  }
+  #printSheet { display: none; }
+
+  /* Animations */
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes quack { 0%,100% { transform: scale(1) rotate(0); } 25% { transform: scale(1.15) rotate(-8deg); } 50% { transform: scale(1.05) rotate(4deg); } 75% { transform: scale(1.1) rotate(-3deg); } }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes modalBounce { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+  /* Login screen */
+  .login-overlay {
+    position: fixed; inset: 0; background: var(--bg);
+    z-index: 9999; display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.4s;
+  }
+  .login-overlay.hidden { opacity: 0; pointer-events: none; }
+  .login-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 2.5rem 2rem; text-align: center;
+    max-width: 360px; width: 90%;
+  }
+  .login-box .login-duck { font-size: 3.5rem; margin-bottom: 0.5rem; }
+  .login-box h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .login-box .login-sub { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 1.5rem; }
+  .login-box input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 1rem; color: var(--text);
+    font-family: var(--sans); font-size: 0.9rem; text-align: center;
+    outline: none; margin-bottom: 0.75rem;
+  }
+  .login-box input:focus { border-color: var(--yellow); box-shadow: 0 0 0 3px var(--yellow-dim); }
+  .login-box .login-error { color: var(--red); font-size: 0.8rem; margin-bottom: 0.5rem; min-height: 1.2rem; }
+
+  /* Provider selector */
+  .provider-bar {
+    display: flex; gap: 0.4rem; margin-bottom: 0.85rem;
+    flex-wrap: wrap;
+  }
+  .provider-btn {
+    font-family: var(--mono); font-size: 0.68rem; padding: 0.3rem 0.65rem;
+    border-radius: 6px; border: 1px solid var(--border); background: transparent;
+    color: var(--text-dim); cursor: pointer; transition: all 0.2s;
+  }
+  .provider-btn:hover { border-color: var(--text-muted); color: var(--text); }
+  .provider-btn.active { border-color: var(--yellow); color: var(--yellow); background: var(--yellow-dim); }
+  .provider-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* Verification result */
+  .verify-result {
+    margin-top: 0.85rem; padding: 0.85rem;
+    border-radius: 12px; border: 1px solid var(--border);
+    animation: fadeUp 0.3s ease;
+    display: none;
+  }
+  .verify-result.visible { display: block; }
+  .verify-result.verdict-match { border-color: var(--green); background: var(--green-dim); }
+  .verify-result.verdict-drift { border-color: var(--orange); background: var(--orange-dim); }
+  .verify-result.verdict-missing { border-color: var(--blue); background: var(--blue-dim); }
+  .verify-result.verdict-major_mismatch { border-color: var(--red); background: var(--red-dim); }
+
+  .verify-result .vr-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .verify-result .vr-verdict {
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 0.15rem 0.5rem; border-radius: 4px;
+  }
+  .vr-verdict-match { background: var(--green); color: var(--bg); }
+  .vr-verdict-drift { background: var(--orange); color: var(--bg); }
+  .vr-verdict-missing { background: var(--blue); color: #fff; }
+  .vr-verdict-major_mismatch { background: var(--red); color: #fff; }
+
+  .verify-result .vr-confidence { font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim); }
+  .verify-result .vr-summary { font-size: 0.88rem; line-height: 1.5; margin-bottom: 0.5rem; }
+  .verify-result .vr-section { margin-bottom: 0.4rem; }
+  .verify-result .vr-section-title {
+    font-family: var(--mono); font-size: 0.65rem; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-dim); margin-bottom: 0.2rem;
+  }
+  .verify-result .vr-items { font-size: 0.82rem; padding-left: 1rem; }
+  .verify-result .vr-items li { margin-bottom: 0.15rem; color: var(--text); }
+  .verify-result .vr-duck-quote {
+    font-style: italic; font-size: 0.82rem; color: var(--yellow);
+    margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border);
+  }
+  .verify-result .vr-masking {
+    font-family: var(--mono); font-size: 0.6rem; color: var(--text-muted);
+    margin-top: 0.4rem;
+  }
+
+  .verify-loading {
+    display: none; align-items: center; gap: 0.5rem;
+    font-family: var(--mono); font-size: 0.78rem; color: var(--yellow);
+    margin-top: 0.5rem;
+  }
+  .verify-loading.active { display: flex; }
+  .verify-loading .spinner {
+    width: 16px; height: 16px; border: 2px solid var(--border);
+    border-top-color: var(--yellow); border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    .app { padding: 1.25rem 1rem 3rem; }
+    .header h1 { font-size: 1.5rem; }
+    .header .shortcuts-hint { display: none; }
+    .duck-zone { flex-direction: column; align-items: center; text-align: center; }
+    .step-tag { display: none; }
+    .creep-alert { left: 1rem; right: 1rem; max-width: none; }
+    .history-panel { width: 100%; right: -100%; }
+    .gear-cards { grid-template-columns: 1fr; }
+    .field-row, .field-row-3 { grid-template-columns: 1fr; }
+    .compare-zone { grid-template-columns: 1fr; }
+    .scope-item input[type="number"] { width: 55px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-duck">🦆</div>
+    <h2>Task Duck</h2>
+    <p class="login-sub">Enter your password to continue</p>
+    <input type="password" id="loginPassword" placeholder="Password..." autofocus
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-error" id="loginError"></div>
+    <button class="btn btn-primary" style="width:100%;" onclick="doLogin()">🔓 Unlock</button>
+  </div>
+</div>
+
+<button class="history-toggle" onclick="toggleHistory()">📋 History</button>
+<div class="work-timer" id="workTimer">
+  <span>⏱</span>
+  <span class="wt-time" id="workTimerDisplay">00:00</span>
+  <span style="color:var(--text-muted)">working</span>
+  <button class="wt-btn" onclick="toggleWorkTimer()" id="workTimerBtn" title="Pause/Resume">⏸</button>
+</div>
+
+<div class="overlay" id="overlay" onclick="toggleHistory()"></div>
+<div class="history-panel" id="historyPanel">
+  <div class="history-panel-header">
+    <h3>📋 Past Tasks</h3>
+    <button onclick="toggleHistory()">✕</button>
+  </div>
+  <div class="history-list" id="historyList"><div class="history-empty">No completed tasks yet.</div></div>
+</div>
+
+<!-- Checkpoint Modal -->
+<div class="checkpoint-overlay" id="checkpointOverlay">
+  <div class="checkpoint-modal">
+    <div class="cm-duck">🦆</div>
+    <h3>Checkpoint! Still inside the fence?</h3>
+    <p id="checkpointMsg">Time to check in. Are you still working on what you planned?</p>
+    <div class="cm-scope" id="checkpointScope"></div>
+    <div class="cm-actions">
+      <button class="btn btn-primary btn-sm" onclick="checkpointYes()">✓ Yes, on track</button>
+      <button class="btn btn-ghost btn-sm" style="border-color:var(--red);color:var(--red);" onclick="checkpointNo()">⚠ I drifted</button>
+    </div>
+  </div>
+</div>
+
+<!-- Markdown Export Modal -->
+<div class="md-overlay" id="mdOverlay">
+  <div class="md-modal">
+    <h3>📋 Markdown Export — paste into PR or Slack</h3>
+    <textarea id="mdContent" readonly></textarea>
+    <div class="md-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeMdModal()">Close</button>
+      <button class="btn btn-primary btn-sm" onclick="copyMarkdown()">📋 Copy</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <div class="header">
+    <h1>🦆 Task <span>Duck</span></h1>
+    <p>READ → WRITE → CHECK — stay in scope, ship clean.</p>
+    <div class="shortcuts-hint">
+      <kbd>Enter</kbd> advance step · <kbd>Esc</kbd> duck quote · <kbd>Ctrl+P</kbd> print · <kbd>Ctrl+M</kbd> markdown
+    </div>
+  </div>
+
+  <div class="duck-zone">
+    <div class="duck-avatar" id="duck" onclick="quackDuck()" title="Click me or press Esc">🦆</div>
+    <div class="duck-speech">
+      <div class="label">Duck says</div>
+      <p id="duckMessage">Hey Nitin! Paste a task below. I'll keep you honest — no scope creep on my watch. 🫡</p>
+    </div>
+  </div>
+
+  <div class="steps" id="stepsContainer">
+    <!-- STEP 1: READ & REWRITE -->
+    <div class="step active" id="step1">
+      <div class="step-header">
+        <div class="step-number"><span>1</span></div>
+        <div class="step-title">Read & Rewrite</div>
+        <div class="step-tag" style="background:var(--blue-dim);color:var(--blue);">understand</div>
+      </div>
+      <div class="step-body">
+        <div class="field-row" style="margin-bottom:0.85rem;">
+          <div class="field" style="margin-bottom:0">
+            <label>Task ID / Ticket #</label>
+            <input type="text" id="taskIdField" placeholder="JIRA-1234, ADO #5678...">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Task Title</label>
+            <input type="text" id="taskTitleField" placeholder="Short title for reference...">
+          </div>
+        </div>
+
+        <div class="compare-zone">
+          <div class="compare-col">
+            <div class="field" style="margin-bottom:0">
+              <label>Raw Task <span class="badge badge-original">original</span></label>
+              <textarea class="tall" id="rawTaskField" placeholder="Paste the original ticket / task description here verbatim..."></textarea>
+            </div>
+          </div>
+          <div class="compare-col">
+            <div class="field" style="margin-bottom:0">
+              <label>Your Understanding <span class="badge badge-yours">rewrite</span></label>
+              <textarea class="tall" id="askField" placeholder="Now rewrite: what is ACTUALLY being asked? One sentence if possible..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>What is the deliverable?</label>
+          <textarea class="short" id="deliverableField" placeholder="A PR? A config change? A document?"></textarea>
+        </div>
+        <div class="field">
+          <label>⚠ What is NOT being asked?</label>
+          <textarea class="short" id="notAskedField" placeholder="Explicitly write what's out of scope..."></textarea>
+        </div>
+        <div class="step-actions">
+          <div class="provider-bar" id="providerBar">
+            <span style="font-family:var(--mono);font-size:0.65rem;color:var(--text-muted);padding:0.3rem 0;">AI:</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="verifyUnderstanding()" id="verifyBtn" disabled>🦆 Verify Understanding</button>
+          <button class="btn btn-primary" onclick="completeStep(1)" id="step1Btn" disabled>Lock it in →</button>
+        </div>
+        <div class="verify-loading" id="verifyLoading"><div class="spinner"></div><span>Masking sensitive data & checking with AI...</span></div>
+        <div class="verify-result" id="verifyResult"></div>
+      </div>
+    </div>
+
+    <div class="step-connector"></div>
+
+    <!-- STEP 2: SCOPE FENCE + TIME BOX -->
+    <div class="step" id="step2">
+      <div class="step-header">
+        <div class="step-number"><span>2</span></div>
+        <div class="step-title">Scope Fence + Time Box</div>
+        <div class="step-tag" style="background:var(--yellow-dim);color:var(--yellow);">constrain</div>
+      </div>
+      <div class="step-body">
+        <div class="field">
+          <label>Only these things get done (3–5 items) — estimate minutes each</label>
+          <div class="scope-list" id="scopeList">
+            <div class="scope-item">
+              <input type="text" placeholder="I will do this..." oninput="checkScope()">
+              <input type="number" placeholder="min" min="1" max="480" oninput="updateTimeSummary()">
+              <span class="time-label">min</span>
+              <button class="remove-btn" onclick="removeScope(this)">×</button>
+            </div>
+            <div class="scope-item">
+              <input type="text" placeholder="I will do this..." oninput="checkScope()">
+              <input type="number" placeholder="min" min="1" max="480" oninput="updateTimeSummary()">
+              <span class="time-label">min</span>
+              <button class="remove-btn" onclick="removeScope(this)">×</button>
+            </div>
+            <div class="scope-item">
+              <input type="text" placeholder="I will do this..." oninput="checkScope()">
+              <input type="number" placeholder="min" min="1" max="480" oninput="updateTimeSummary()">
+              <span class="time-label">min</span>
+              <button class="remove-btn" onclick="removeScope(this)">×</button>
+            </div>
+          </div>
+          <button class="add-scope-btn" onclick="addScope()" id="addScopeBtn">+ Add item</button>
+          <div class="time-summary" id="timeSummary">
+            <span class="ts-label">Total estimate:</span>
+            <span class="ts-value" id="totalTime">0 min</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>🅿 Parking lot — good ideas for LATER, not now</label>
+          <textarea id="parkingLot" placeholder="'While I'm in here I could also...' goes HERE, not in your PR."></textarea>
+        </div>
+        <div class="step-actions">
+          <button class="btn btn-ghost" onclick="goBack(1)">← Back</button>
+          <button class="btn btn-primary" onclick="completeStep(2)" id="step2Btn" disabled>Fence set →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"></div>
+
+    <!-- STEP 3: DO THE WORK (timer + checkpoints) -->
+    <div class="step" id="step3">
+      <div class="step-header">
+        <div class="step-number"><span>3</span></div>
+        <div class="step-title">Do the Work</div>
+        <div class="step-tag" style="background:var(--orange-dim);color:var(--orange);">execute</div>
+      </div>
+      <div class="step-body">
+        <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:0.75rem;">
+          Work timer is running. The duck will check in every <strong style="color:var(--orange)">30 min</strong> to make sure you haven't drifted. When you're done, click below.
+        </p>
+
+        <div class="diff-section">
+          <h4>📊 Diff Tracker — what actually happened?</h4>
+          <div id="diffList"></div>
+          <div class="diff-add-extra">
+            <input type="text" id="extraWorkInput" placeholder="I also did this (unplanned)...">
+            <button class="btn btn-ghost btn-sm" onclick="addExtraWork()">+ Add</button>
+          </div>
+        </div>
+
+        <div class="step-actions" style="margin-top:1rem;">
+          <button class="btn btn-ghost" onclick="goBack(2)">← Back</button>
+          <button class="btn btn-primary" onclick="completeStep(3)">Done working →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"></div>
+
+    <!-- STEP 4: PRE-PUSH CHECK + PEER IMPACT -->
+    <div class="step" id="step4">
+      <div class="step-header">
+        <div class="step-number"><span>4</span></div>
+        <div class="step-title">Pre-Push Check</div>
+        <div class="step-tag" style="background:var(--green-dim);color:var(--green);">verify</div>
+      </div>
+      <div class="step-body">
+        <div class="field">
+          <label>Review before submitting</label>
+          <div class="check-questions" id="checkQuestions"></div>
+        </div>
+
+        <div class="peer-section">
+          <div class="field" style="margin-bottom:0.5rem;">
+            <label>👥 Peer Impact Check</label>
+            <textarea class="short" id="peerWho" placeholder="Who else will this change touch? (teams, services, people)"></textarea>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Did anyone ask for the extra changes?</label>
+            <textarea class="short" id="peerAsked" placeholder="If you did anything unplanned, was it requested? By whom?"></textarea>
+          </div>
+        </div>
+
+        <div class="step-actions">
+          <button class="btn btn-ghost" onclick="goBack(3)">← Back</button>
+          <button class="btn btn-primary" onclick="completeAll()" id="step4Btn" disabled>✓ Ship it!</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Completion -->
+  <div class="completion" id="completionZone">
+    <div class="big-duck">🦆</div>
+    <h2>Clean ship! No scope creep.</h2>
+    <div class="accuracy-card" id="accuracyCard">
+      <div class="acc-label">Scope Accuracy</div>
+      <div class="acc-score" id="accScore">—</div>
+      <div class="acc-detail" id="accDetail"></div>
+    </div>
+    <p>Your task stayed inside the fence. That's how it's done.</p>
+    <div class="completion-actions">
+      <button class="btn btn-primary" onclick="printChecklist()">🖨️ Print</button>
+      <button class="btn btn-ghost" onclick="exportMarkdown()">📋 Markdown</button>
+      <button class="btn btn-ghost" onclick="resetAll()">🦆 New Task</button>
+    </div>
+  </div>
+
+  <!-- Gear -->
+  <div class="gear-section">
+    <h2>🛠️ Recommended Gear</h2>
+    <p class="gear-subtitle">Everything to run this system on paper — under $100.</p>
+    <div class="gear-cards">
+      <div class="gear-card">
+        <div class="gc-emoji">🖨️</div>
+        <div class="gc-name">Phomemo M832</div>
+        <div class="gc-desc">Portable Bluetooth thermal printer. 300 DPI, 8.5"×11". Inkless. Comes with case + 4 paper rolls.</div>
+        <div class="gc-price">~$56</div>
+        <a href="https://www.amazon.com/Phomemo-Portable-Printers-Wireless-Bluetooth/dp/B0DSVYK16V" target="_blank">View on Amazon →</a>
+      </div>
+      <div class="gear-card">
+        <div class="gc-emoji">📓</div>
+        <div class="gc-name">Leuchtturm1917 Bullet Journal</div>
+        <div class="gc-desc">A5 dotted hardcover, 240 numbered pages. Ink-proof, opens flat.</div>
+        <div class="gc-price">~$30</div>
+        <a href="https://www.amazon.com/dp/B016WKV8UC" target="_blank">View on Amazon →</a>
+      </div>
+      <div class="gear-card">
+        <div class="gc-emoji">📜</div>
+        <div class="gc-name">Thermal Paper (Letter)</div>
+        <div class="gc-desc">8.5"×11", 100 sheets. Compatible with M832.</div>
+        <div class="gc-price">~$12</div>
+        <a href="https://www.amazon.com/s?k=phomemo+thermal+paper+8.5+x+11" target="_blank">Amazon →</a>
+      </div>
+      <div class="gear-card">
+        <div class="gc-emoji">🖊️</div>
+        <div class="gc-name">Pilot G2 07 (4-pack)</div>
+        <div class="gc-desc">Gel ink, doesn't bleed through Leuchtturm pages.</div>
+        <div class="gc-price">~$5</div>
+        <a href="https://www.amazon.com/s?k=pilot+g2+07+4+pack" target="_blank">Amazon →</a>
+      </div>
+    </div>
+    <div class="gear-total">Estimated total: <strong>~$103</strong> (often under $90 with deals)</div>
+  </div>
+</div>
+
+<div class="creep-alert" id="creepAlert">
+  <div class="duck-mini">🦆</div>
+  <p id="creepMessage">Quack!</p>
+  <button class="dismiss" onclick="hideCreep()">✕</button>
+</div>
+
+<div id="printSheet"></div>
+
+<script>
+// ============================================
+// AUTH & SESSION
+// ============================================
+let authToken = localStorage.getItem('taskDuckToken') || '';
+let selectedProvider = localStorage.getItem('taskDuckProvider') || '';
+let availableProviders = [];
+
+async function doLogin() {
+  const pw = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = 'Wrong password'; return; }
+    authToken = data.token;
+    localStorage.setItem('taskDuckToken', authToken);
+    document.getElementById('loginOverlay').classList.add('hidden');
+    await loadProviders();
+  } catch (e) {
+    errEl.textContent = 'Connection error';
+  }
+}
+
+async function checkAuth() {
+  if (!authToken) return;
+  try {
+    const res = await fetch('/api/providers', { headers: { 'Authorization': `Bearer ${authToken}` } });
+    if (res.ok) {
+      document.getElementById('loginOverlay').classList.add('hidden');
+      await loadProviders();
+    } else {
+      authToken = '';
+      localStorage.removeItem('taskDuckToken');
+    }
+  } catch { /* server not available, show login */ }
+}
+
+async function loadProviders() {
+  try {
+    const res = await fetch('/api/providers', { headers: { 'Authorization': `Bearer ${authToken}` } });
+    const data = await res.json();
+    availableProviders = data.providers || [];
+    renderProviders();
+  } catch { /* offline mode */ }
+}
+
+function renderProviders() {
+  const bar = document.getElementById('providerBar');
+  bar.innerHTML = '<span style="font-family:var(--mono);font-size:0.65rem;color:var(--text-muted);padding:0.3rem 0;">AI:</span>';
+  if (!availableProviders.length) {
+    bar.innerHTML += '<span style="font-size:0.7rem;color:var(--text-muted);">No providers configured</span>';
+    return;
+  }
+  availableProviders.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'provider-btn' + (selectedProvider === p.id ? ' active' : '');
+    btn.textContent = p.name;
+    btn.onclick = () => {
+      selectedProvider = p.id;
+      localStorage.setItem('taskDuckProvider', p.id);
+      renderProviders();
+      updateVerifyBtn();
+    };
+    bar.appendChild(btn);
+  });
+  if (!selectedProvider && availableProviders.length) {
+    selectedProvider = availableProviders[0].id;
+    localStorage.setItem('taskDuckProvider', selectedProvider);
+    renderProviders();
+  }
+  updateVerifyBtn();
+}
+
+function updateVerifyBtn() {
+  const raw = document.getElementById('rawTaskField').value.trim();
+  const ask = document.getElementById('askField').value.trim();
+  document.getElementById('verifyBtn').disabled = !(raw && ask && selectedProvider);
+}
+
+['rawTaskField', 'askField'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateVerifyBtn);
+});
+
+async function verifyUnderstanding() {
+  const loading = document.getElementById('verifyLoading');
+  const resultEl = document.getElementById('verifyResult');
+  loading.classList.add('active');
+  resultEl.classList.remove('visible');
+  resultEl.className = 'verify-result';
+
+  try {
+    const res = await fetch('/api/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        provider: selectedProvider,
+        original: document.getElementById('rawTaskField').value.trim(),
+        rewrite: document.getElementById('askField').value.trim(),
+        deliverable: document.getElementById('deliverableField').value.trim(),
+        notAsked: document.getElementById('notAskedField').value.trim()
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    const r = data.result;
+    const verdict = r.verdict || 'error';
+    const verdictLabels = { match: '✓ Match', drift: '⚠ Scope Drift', missing: '⬡ Missing Items', major_mismatch: '✗ Major Mismatch', error: '? Error' };
+    const verdictIcons = { match: '✅', drift: '⚠️', missing: '🔍', major_mismatch: '🚨', error: '❌' };
+
+    let html = `<div class="vr-header">
+      <span class="vr-verdict vr-verdict-${verdict}">${verdictLabels[verdict] || verdict}</span>
+      ${r.confidence ? `<span class="vr-confidence">${Math.round(r.confidence * 100)}% confidence</span>` : ''}
+    </div>`;
+    html += `<div class="vr-summary">${verdictIcons[verdict] || ''} ${esc(r.summary || '')}</div>`;
+
+    if (r.scope_drift?.detected && r.scope_drift.items?.length) {
+      html += `<div class="vr-section"><div class="vr-section-title">🔴 Scope Drift Detected</div><ul class="vr-items">${r.scope_drift.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>`;
+    }
+    if (r.missing_items?.detected && r.missing_items.items?.length) {
+      html += `<div class="vr-section"><div class="vr-section-title">🟡 Missing From Rewrite</div><ul class="vr-items">${r.missing_items.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>`;
+    }
+    if (r.assumptions?.detected && r.assumptions.items?.length) {
+      html += `<div class="vr-section"><div class="vr-section-title">🟠 Assumptions</div><ul class="vr-items">${r.assumptions.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>`;
+    }
+    if (r.suggestions?.length) {
+      html += `<div class="vr-section"><div class="vr-section-title">💡 Suggestions</div><ul class="vr-items">${r.suggestions.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>`;
+    }
+    if (r.duck_quote) {
+      html += `<div class="vr-duck-quote">🦆 "${esc(r.duck_quote)}"</div>`;
+      duckSay(r.duck_quote);
+    }
+    if (data.masking?.itemsMasked > 0) {
+      html += `<div class="vr-masking">🔒 ${data.masking.itemsMasked} sensitive item(s) were masked before sending to ${data.provider}</div>`;
+    }
+
+    resultEl.innerHTML = html;
+    resultEl.classList.add('visible', `verdict-${verdict}`);
+
+  } catch (e) {
+    resultEl.innerHTML = `<div class="vr-summary" style="color:var(--red);">❌ ${esc(e.message)}</div>`;
+    resultEl.classList.add('visible');
+  } finally {
+    loading.classList.remove('active');
+  }
+}
+
+// Check auth on load
+checkAuth();
+// ============================================
+// STATE
+// ============================================
+let currentStep = 1;
+let checkpointInterval = null;
+let workTimerInterval = null;
+let workSeconds = 0;
+let workTimerRunning = false;
+let diffItems = []; // { text, status: 'done'|'skipped'|'extra' }
+
+const duckQuotes = [
+  "Is this in your scope fence? No? Then put it down. 🦆",
+  "You're an architect, not a magician — one task at a time.",
+  "Your future self will thank you for NOT touching that extra file.",
+  "Scope creep is just procrastination wearing a productivity hat.",
+  "Read the task again. Slower. What does it ACTUALLY say?",
+  "If a peer would ask 'why did you touch this?' — don't touch it.",
+  "The parking lot exists for a reason. Use it.",
+  "BUILD · ARCHITECT · SHIP — in that order, one task at a time.",
+  "Every line you don't write is a line nobody has to review.",
+  "The best refactor is the one that stays in the backlog today.",
+  "Quack! Stay focused. You got this. 🫡",
+  "That 'quick fix while I'm here' is never quick.",
+  "Write it down or it doesn't count. No exceptions.",
+  "Three items in scope. Not thirteen. Three.",
+  "Ship small, ship clean, ship often."
+];
+
+// ============================================
+// KEYBOARD SHORTCUTS
+// ============================================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); quackDuck(); return; }
+  if (e.ctrlKey && e.key === 'm') { e.preventDefault(); exportMarkdown(); return; }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const btn = document.querySelector(`.step.active .btn-primary:not(:disabled)`);
+    if (btn) btn.click();
+  }
+});
+
+// ============================================
+// JIRA QUICK PASTE
+// ============================================
+document.getElementById('taskIdField').addEventListener('paste', e => {
+  setTimeout(() => {
+    const val = document.getElementById('taskIdField').value.trim();
+    // Extract ticket ID from URL patterns
+    const jiraMatch = val.match(/\/browse\/([A-Z]+-\d+)/i) || val.match(/selectedIssue=([A-Z]+-\d+)/i);
+    const adoMatch = val.match(/workitem\/(\d+)/i) || val.match(/_workitems\/edit\/(\d+)/i);
+    if (jiraMatch) {
+      document.getElementById('taskIdField').value = jiraMatch[1].toUpperCase();
+      duckSay("Extracted ticket ID from URL! Now paste the description on the left. 🦆");
+    } else if (adoMatch) {
+      document.getElementById('taskIdField').value = '#' + adoMatch[1];
+      duckSay("Got the ADO work item ID! Paste the description on the left. 🦆");
+    }
+  }, 50);
+});
+
+// ============================================
+// DUCK
+// ============================================
+function quackDuck() {
+  const d = document.getElementById('duck');
+  d.classList.remove('quack'); void d.offsetWidth; d.classList.add('quack');
+  duckSay(duckQuotes[Math.floor(Math.random() * duckQuotes.length)]);
+}
+function duckSay(msg) { document.getElementById('duckMessage').textContent = msg; }
+
+// ============================================
+// STEP NAVIGATION
+// ============================================
+function activateStep(n) {
+  for (let i = 1; i <= 4; i++) document.getElementById(`step${i}`).classList.remove('active');
+  document.getElementById(`step${n}`).classList.add('active');
+  currentStep = n;
+  const msgs = {
+    1: "Read the task carefully. Paste the original on the left, rewrite YOUR understanding on the right. Spot the gaps.",
+    2: "Build your fence. 3–5 items max, with time estimates. If the total looks huge, the task might need splitting.",
+    3: "Timer's running! Work inside the fence. I'll check in every 30 min. Mark items done or skipped as you go.",
+    4: "Almost done! Verify every check, fill in the peer impact, then ship."
+  };
+  duckSay(msgs[n]);
+}
+
+function completeStep(n) {
+  document.getElementById(`step${n}`).classList.add('completed');
+  document.getElementById(`step${n}`).classList.remove('active');
+  if (n === 2) {
+    buildDiffTracker();
+    startWorkTimer();
+    startCheckpoints();
+  }
+  if (n === 3) {
+    stopWorkTimer();
+    stopCheckpoints();
+    buildCheckQuestions();
+  }
+  if (n < 4) activateStep(n + 1);
+}
+
+function goBack(n) {
+  document.getElementById(`step${n + 1}`).classList.remove('active');
+  document.getElementById(`step${n}`).classList.remove('completed');
+  activateStep(n);
+  if (n < 3) { stopWorkTimer(); stopCheckpoints(); }
+}
+
+// ============================================
+// STEP 1 VALIDATION
+// ============================================
+['askField', 'deliverableField', 'notAskedField'].forEach(id => {
+  document.getElementById(id).addEventListener('input', validateStep1);
+});
+function validateStep1() {
+  const a = document.getElementById('askField').value.trim();
+  const b = document.getElementById('deliverableField').value.trim();
+  const c = document.getElementById('notAskedField').value.trim();
+  document.getElementById('step1Btn').disabled = !(a && b && c);
+}
+
+// ============================================
+// STEP 2: SCOPE + TIMEBOX
+// ============================================
+function addScope() {
+  const list = document.getElementById('scopeList');
+  if (list.querySelectorAll('.scope-item').length >= 5) {
+    showCreepCustom("Quack! 5 items max. If you need more, the task is too big — split it.");
+    return;
+  }
+  const div = document.createElement('div');
+  div.className = 'scope-item';
+  div.innerHTML = `<input type="text" placeholder="I will do this..." oninput="checkScope()"><input type="number" placeholder="min" min="1" max="480" oninput="updateTimeSummary()"><span class="time-label">min</span><button class="remove-btn" onclick="removeScope(this)">×</button>`;
+  list.appendChild(div);
+  div.querySelector('input').focus();
+  checkScope();
+}
+
+function removeScope(btn) {
+  const list = document.getElementById('scopeList');
+  if (list.querySelectorAll('.scope-item').length > 1) btn.closest('.scope-item').remove();
+  checkScope(); updateTimeSummary();
+}
+
+function checkScope() {
+  const inputs = document.querySelectorAll('#scopeList .scope-item input[type="text"]');
+  const filled = Array.from(inputs).filter(i => i.value.trim()).length;
+  document.getElementById('step2Btn').disabled = filled < 3;
+  document.getElementById('addScopeBtn').style.display = document.querySelectorAll('#scopeList .scope-item').length >= 5 ? 'none' : '';
+}
+
+function updateTimeSummary() {
+  const nums = document.querySelectorAll('#scopeList .scope-item input[type="number"]');
+  let total = 0;
+  nums.forEach(n => { total += parseInt(n.value) || 0; });
+  const display = document.getElementById('totalTime');
+  const hrs = Math.floor(total / 60);
+  const mins = total % 60;
+  const label = hrs > 0 ? `${hrs}h ${mins}m` : `${total} min`;
+  display.textContent = label;
+  display.className = total > 240 ? 'ts-warn' : total > 0 ? 'ts-ok' : 'ts-value';
+  if (total > 240) {
+    duckSay("That's over 4 hours for a single task. Are you sure this shouldn't be split? 🦆");
+  }
+}
+
+function getScopeItems() {
+  const items = [];
+  document.querySelectorAll('#scopeList .scope-item').forEach(si => {
+    const text = si.querySelector('input[type="text"]').value.trim();
+    const mins = parseInt(si.querySelector('input[type="number"]').value) || 0;
+    if (text) items.push({ text, mins });
+  });
+  return items;
+}
+
+// ============================================
+// STEP 3: WORK TIMER + CHECKPOINTS + DIFF
+// ============================================
+function startWorkTimer() {
+  workSeconds = 0; workTimerRunning = true;
+  document.getElementById('workTimer').classList.add('active');
+  document.getElementById('workTimerBtn').textContent = '⏸';
+  workTimerInterval = setInterval(() => {
+    if (workTimerRunning) {
+      workSeconds++;
+      const m = Math.floor(workSeconds / 60);
+      const s = workSeconds % 60;
+      document.getElementById('workTimerDisplay').textContent =
+        `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+  }, 1000);
+}
+
+function toggleWorkTimer() {
+  workTimerRunning = !workTimerRunning;
+  document.getElementById('workTimerBtn').textContent = workTimerRunning ? '⏸' : '▶';
+}
+
+function stopWorkTimer() {
+  clearInterval(workTimerInterval);
+  document.getElementById('workTimer').classList.remove('active');
+}
+
+function startCheckpoints() {
+  checkpointInterval = setInterval(showCheckpoint, 30 * 60 * 1000); // 30 min
+}
+
+function stopCheckpoints() { clearInterval(checkpointInterval); }
+
+function showCheckpoint() {
+  const scope = getScopeItems();
+  const list = document.getElementById('checkpointScope');
+  list.innerHTML = '<ul style="margin:0;padding:0;">' + scope.map(s => `<li>${esc(s.text)}</li>`).join('') + '</ul>';
+  const msgs = [
+    "⏱ 30 minutes in. Quick check — are you still inside the fence?",
+    "Time check! Look at your scope list. Anything you're doing that's NOT on it?",
+    "Hey architect — are you building what was asked, or something 'better'?",
+    "Checkpoint! If a peer saw your diff right now, would they understand every change?"
+  ];
+  document.getElementById('checkpointMsg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+  document.getElementById('checkpointOverlay').classList.add('show');
+}
+
+function checkpointYes() {
+  document.getElementById('checkpointOverlay').classList.remove('show');
+  duckSay("Good. Keep going. Stay inside the fence. 🦆");
+}
+
+function checkpointNo() {
+  document.getElementById('checkpointOverlay').classList.remove('show');
+  duckSay("STOP. Look at your scope list. Put the unplanned work in the parking lot NOW. Then refocus. 🦆");
+  showCreepCustom("You drifted! Add unplanned work to the diff tracker and re-focus on your scope items.");
+}
+
+// Diff tracker
+function buildDiffTracker() {
+  const scope = getScopeItems();
+  diffItems = scope.map(s => ({ text: s.text, status: 'done', planned: true }));
+  renderDiff();
+}
+
+function renderDiff() {
+  const list = document.getElementById('diffList');
+  list.innerHTML = diffItems.map((d, i) => `
+    <div class="diff-item">
+      <span class="diff-planned">${d.planned ? '' : '⚡ '}${esc(d.text)}</span>
+      <span class="diff-status diff-${d.status}" onclick="cycleDiffStatus(${i})">
+        ${d.status === 'done' ? '✓ done' : d.status === 'skipped' ? '✗ skip' : '⚡ extra'}
+      </span>
+    </div>
+  `).join('');
+}
+
+function cycleDiffStatus(i) {
+  const item = diffItems[i];
+  if (item.planned) {
+    item.status = item.status === 'done' ? 'skipped' : 'done';
+  }
+  renderDiff();
+}
+
+function addExtraWork() {
+  const input = document.getElementById('extraWorkInput');
+  const text = input.value.trim();
+  if (!text) return;
+  diffItems.push({ text, status: 'extra', planned: false });
+  input.value = '';
+  renderDiff();
+}
+
+// ============================================
+// STEP 4: CHECK + PEER IMPACT
+// ============================================
+function buildCheckQuestions() {
+  const ask = document.getElementById('askField').value.trim();
+  const deliverable = document.getElementById('deliverableField').value.trim();
+  const notAsked = document.getElementById('notAskedField').value.trim();
+  const extras = diffItems.filter(d => d.status === 'extra');
+  const questions = [
+    `My work answers: "${ask}" — and only that.`,
+    `The deliverable is exactly: "${deliverable}".`,
+    `I did NOT do anything related to: "${notAsked}".`,
+    "A peer reviewing this would NOT ask 'why did you touch this?'",
+    "I haven't gold-plated, over-engineered, or refactored beyond the task."
+  ];
+  if (extras.length > 0) {
+    questions.push(`I have ${extras.length} unplanned item(s) — each is justified and documented.`);
+  }
+  const container = document.getElementById('checkQuestions');
+  container.innerHTML = '';
+  questions.forEach(q => {
+    const div = document.createElement('div');
+    div.className = 'check-q';
+    div.onclick = () => toggleCheck(div);
+    div.innerHTML = `<div class="checkbox"></div><div class="check-text">${q}</div>`;
+    container.appendChild(div);
+  });
+}
+
+function toggleCheck(el) {
+  el.classList.toggle('checked');
+  const all = document.querySelectorAll('.check-q');
+  const checked = document.querySelectorAll('.check-q.checked');
+  document.getElementById('step4Btn').disabled = checked.length !== all.length;
+  if (el.classList.contains('checked')) {
+    duckSay(checked.length === all.length ? "All checks green! Ship it. 🚀" : `${checked.length}/${all.length} verified.`);
+  }
+}
+
+// ============================================
+// COMPLETE
+// ============================================
+function completeAll() {
+  document.getElementById('step4').classList.add('completed');
+  document.getElementById('step4').classList.remove('active');
+  document.getElementById('stepsContainer').style.display = 'none';
+  document.getElementById('completionZone').classList.add('visible');
+
+  // Calculate accuracy
+  const planned = diffItems.filter(d => d.planned);
+  const done = planned.filter(d => d.status === 'done').length;
+  const extras = diffItems.filter(d => d.status === 'extra').length;
+  const total = planned.length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 100;
+  const deduction = extras * 10;
+  const finalScore = Math.max(0, pct - deduction);
+
+  const scoreEl = document.getElementById('accScore');
+  scoreEl.textContent = finalScore + '%';
+  scoreEl.style.color = finalScore >= 80 ? 'var(--green)' : finalScore >= 50 ? 'var(--orange)' : 'var(--red)';
+  document.getElementById('accDetail').textContent =
+    `${done}/${total} planned done · ${extras} unplanned item${extras !== 1 ? 's' : ''}`;
+
+  duckSay(finalScore >= 80 ? "Clean ship! That's my architect! 🦆✨" :
+    finalScore >= 50 ? "Decent, but some drift. Review what pulled you off track." :
+    "Significant drift from plan. Let's tighten the fence next time.");
+
+  saveToHistory(finalScore, done, total, extras);
+}
+
+// ============================================
+// MARKDOWN EXPORT
+// ============================================
+function exportMarkdown() {
+  const d = gatherData();
+  const scope = getScopeItems();
+  let md = `## 🦆 Task Duck — ${d.taskId} ${d.taskTitle}\n\n`;
+  md += `**Date:** ${d.date}\n\n`;
+  md += `### What's Being Asked\n${d.ask}\n\n`;
+  md += `### Deliverable\n${d.deliverable}\n\n`;
+  md += `### NOT In Scope\n${d.notAsked}\n\n`;
+  md += `### Scope Fence\n`;
+  scope.forEach((s, i) => { md += `- [${diffItems[i]?.status === 'done' ? 'x' : ' '}] ${s.text}${s.mins ? ` *(${s.mins}m)*` : ''}\n`; });
+  const extras = diffItems.filter(d => d.status === 'extra');
+  if (extras.length) {
+    md += `\n### Unplanned Work\n`;
+    extras.forEach(e => { md += `- ⚡ ${e.text}\n`; });
+  }
+  const parking = document.getElementById('parkingLot').value.trim();
+  if (parking) md += `\n### Parking Lot (Future)\n${parking}\n`;
+  const peer = document.getElementById('peerWho')?.value.trim();
+  if (peer) md += `\n### Peer Impact\n${peer}\n`;
+  md += `\n---\n*Generated by Task Duck · BUILD · ARCHITECT · SHIP*\n`;
+
+  document.getElementById('mdContent').value = md;
+  document.getElementById('mdOverlay').classList.add('show');
+}
+
+function copyMarkdown() {
+  const ta = document.getElementById('mdContent');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(() => {
+    duckSay("Markdown copied to clipboard! Paste it into your PR. 🦆");
+    closeMdModal();
+  });
+}
+
+function closeMdModal() { document.getElementById('mdOverlay').classList.remove('show'); }
+
+// ============================================
+// PRINT
+// ============================================
+function gatherData() {
+  return {
+    taskId: document.getElementById('taskIdField').value.trim() || '—',
+    taskTitle: document.getElementById('taskTitleField').value.trim() || 'Untitled Task',
+    rawTask: document.getElementById('rawTaskField').value.trim(),
+    ask: document.getElementById('askField').value.trim(),
+    deliverable: document.getElementById('deliverableField').value.trim(),
+    notAsked: document.getElementById('notAskedField').value.trim(),
+    scope: getScopeItems(),
+    parkingLot: document.getElementById('parkingLot').value.trim(),
+    peerWho: document.getElementById('peerWho')?.value.trim() || '',
+    peerAsked: document.getElementById('peerAsked')?.value.trim() || '',
+    date: new Date().toLocaleDateString('en-US', { weekday:'short', year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }),
+    workTime: document.getElementById('workTimerDisplay')?.textContent || '—'
+  };
+}
+
+function buildPrintHTML(data) {
+  const scopeRows = (data.scope || []).map(s => `
+    <tr><td style="width:28px;text-align:center;padding:4px;"><span style="display:inline-block;width:14px;height:14px;border:1.5px solid #333;border-radius:3px;"></span></td>
+    <td style="padding:4px 8px;font-size:10pt;border-bottom:1px solid #e0e0e0;">${esc(s.text)}</td>
+    <td style="width:50px;text-align:right;padding:4px 8px;font-family:monospace;font-size:9pt;color:#666;border-bottom:1px solid #e0e0e0;">${s.mins ? s.mins+'m' : ''}</td></tr>
+  `).join('');
+  return `
+    <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+      <tr><td style="padding:0;"><div style="font-size:16pt;font-weight:bold;">🦆 Task Duck Checklist</div><div style="font-size:7.5pt;color:#777;text-transform:uppercase;letter-spacing:1px;">READ → WRITE → CHECK</div></td>
+      <td style="width:80px;text-align:right;font-size:7pt;color:#999;">taskduck</td></tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;border:1.5px solid #222;margin-bottom:10px;">
+      <tr><td style="width:22%;background:#f5f5f0;padding:5px 8px;font-size:7.5pt;font-weight:bold;text-transform:uppercase;color:#555;border-right:1px solid #ddd;border-bottom:1px solid #ddd;">Task ID</td><td style="padding:5px 8px;font-size:10.5pt;font-weight:bold;font-family:monospace;border-bottom:1px solid #ddd;">${esc(data.taskId)}</td></tr>
+      <tr><td style="background:#f5f5f0;padding:5px 8px;font-size:7.5pt;font-weight:bold;text-transform:uppercase;color:#555;border-right:1px solid #ddd;border-bottom:1px solid #ddd;">Title</td><td style="padding:5px 8px;font-size:10.5pt;font-weight:600;border-bottom:1px solid #ddd;">${esc(data.taskTitle)}</td></tr>
+      <tr><td style="background:#f5f5f0;padding:5px 8px;font-size:7.5pt;font-weight:bold;text-transform:uppercase;color:#555;border-right:1px solid #ddd;">Date</td><td style="padding:5px 8px;font-size:9pt;color:#555;">${esc(data.date)}</td></tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
+      <tr><td colspan="3" style="background:#222;color:#fff;padding:5px 8px;font-size:8.5pt;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">① Read & Rewrite</td></tr>
+      <tr><td style="width:22%;background:#f9f9f5;padding:5px 8px;font-size:7.5pt;font-weight:bold;text-transform:uppercase;color:#555;border:1px solid #ddd;vertical-align:top;">What is asked?</td><td colspan="2" style="padding:5px 8px;font-size:10pt;border:1px solid #ddd;">${esc(data.ask)}</td></tr>
+      <tr><td style="background:#f9f9f5;padding:5px 8px;font-size:7.5pt;font-weight:bold;text-transform:uppercase;color:#555;border:1px solid #ddd;vertical-align:top;">Deliverable</td><td colspan="2" style="padding:5px 8px;font-size:10pt;border:1px solid #ddd;">${esc(data.deliverable)}</td></tr>
+      <tr><td style="background:#fff0f0;padding:5px 8px;font-size:7.5pt;font-weight:bold;text-transform:uppercase;color:#c00;border:1px solid #ddd;vertical-align:top;">⚠ NOT asked</td><td colspan="2" style="padding:5px 8px;font-size:10pt;border:1px solid #ddd;color:#900;">${esc(data.notAsked)}</td></tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
+      <tr><td colspan="3" style="background:#222;color:#fff;padding:5px 8px;font-size:8.5pt;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">② Scope Fence</td></tr>
+      ${scopeRows}
+    </table>
+    ${data.parkingLot ? `<table style="width:100%;border-collapse:collapse;margin-bottom:10px;border:1px dashed #ccc;"><tr><td style="background:#fffbe6;padding:5px 8px;font-size:8pt;font-weight:bold;text-transform:uppercase;color:#996600;border-bottom:1px dashed #ddd;">🅿 Parking Lot</td></tr><tr><td style="padding:4px 8px;font-size:9pt;color:#555;">${esc(data.parkingLot)}</td></tr></table>` : ''}
+    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
+      <tr><td colspan="2" style="background:#222;color:#fff;padding:5px 8px;font-size:8.5pt;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">③ Pre-Push Check</td></tr>
+      ${['My work answers the task — and only that.','Deliverable matches exactly.','Did NOT touch the "not asked" zone.','Peer would NOT ask "why did you do this?"','No gold-plating or bonus refactors.'].map(q => `<tr><td style="width:28px;text-align:center;padding:4px;border-bottom:1px solid #e0e0e0;"><span style="display:inline-block;width:14px;height:14px;border:1.5px solid #333;border-radius:3px;"></span></td><td style="padding:4px 8px;font-size:9.5pt;border-bottom:1px solid #e0e0e0;">${q}</td></tr>`).join('')}
+    </table>
+    ${data.peerWho ? `<table style="width:100%;border-collapse:collapse;margin-bottom:10px;border:1px solid #8b5cf6;"><tr><td style="background:#f3f0ff;padding:5px 8px;font-size:8pt;font-weight:bold;text-transform:uppercase;color:#7c3aed;border-bottom:1px solid #ddd;">👥 Peer Impact</td></tr><tr><td style="padding:4px 8px;font-size:9pt;">${esc(data.peerWho)}</td></tr></table>` : ''}
+    <table style="width:100%;border-collapse:collapse;margin-top:14px;">
+      <tr><td style="width:50%;padding:6px 0;border-top:1.5px solid #222;"><div style="font-size:7.5pt;color:#777;text-transform:uppercase;margin-bottom:16px;">Signature / Initials</div></td>
+      <td style="width:50%;padding:6px 0 6px 16px;border-top:1.5px solid #222;"><div style="font-size:7.5pt;color:#777;text-transform:uppercase;margin-bottom:16px;">Date Completed</div></td></tr>
+    </table>
+    <div style="text-align:center;margin-top:8px;font-size:7pt;color:#aaa;">BUILD · ARCHITECT · SHIP — Task Duck | ${esc(data.date)}</div>
+  `;
+}
+
+function printChecklist() {
+  document.getElementById('printSheet').innerHTML = buildPrintHTML(gatherData());
+  window.print();
+}
+
+// ============================================
+// HISTORY
+// ============================================
+function saveToHistory(score, done, total, extras) {
+  const history = JSON.parse(localStorage.getItem('taskDuckHistory') || '[]');
+  const entry = {
+    taskId: document.getElementById('taskIdField').value.trim(),
+    taskTitle: document.getElementById('taskTitleField').value.trim(),
+    task: document.getElementById('askField').value.trim(),
+    deliverable: document.getElementById('deliverableField').value.trim(),
+    notAsked: document.getElementById('notAskedField').value.trim(),
+    scope: getScopeItems(),
+    parkingLot: document.getElementById('parkingLot').value.trim(),
+    peerWho: document.getElementById('peerWho')?.value.trim() || '',
+    diffItems: diffItems,
+    accuracy: score, done, total, extras,
+    workTime: workSeconds,
+    date: new Date().toISOString()
+  };
+  history.unshift(entry);
+  if (history.length > 50) history.pop();
+  localStorage.setItem('taskDuckHistory', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const history = JSON.parse(localStorage.getItem('taskDuckHistory') || '[]');
+  const list = document.getElementById('historyList');
+  if (!history.length) { list.innerHTML = '<div class="history-empty">No completed tasks yet.</div>'; return; }
+  list.innerHTML = history.map((h, i) => `
+    <div class="history-item">
+      ${h.taskId ? `<div class="hi-id">${esc(h.taskId)}</div>` : ''}
+      <div class="hi-task">${esc(h.taskTitle || h.task)}</div>
+      <div class="hi-meta">
+        <span class="hi-date">${new Date(h.date).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+        ${h.accuracy !== undefined ? `<span class="hi-accuracy" style="color:${h.accuracy >= 80 ? 'var(--green)' : h.accuracy >= 50 ? 'var(--orange)' : 'var(--red)'}">${h.accuracy}% accuracy</span>` : ''}
+      </div>
+      <div class="hi-actions">
+        <button onclick="event.stopPropagation();printFromHistory(${i})">🖨️</button>
+        <button onclick="event.stopPropagation();deleteHistory(${i})" style="border-color:var(--red);color:var(--red);">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function printFromHistory(idx) {
+  const h = JSON.parse(localStorage.getItem('taskDuckHistory') || '[]')[idx];
+  if (!h) return;
+  const data = { taskId: h.taskId||'—', taskTitle: h.taskTitle||'Untitled', ask: h.task, deliverable: h.deliverable, notAsked: h.notAsked, scope: h.scope, parkingLot: h.parkingLot, peerWho: h.peerWho||'', date: new Date(h.date).toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) };
+  document.getElementById('printSheet').innerHTML = buildPrintHTML(data);
+  window.print();
+}
+
+function deleteHistory(idx) {
+  if (!confirm('Delete this task?')) return;
+  const h = JSON.parse(localStorage.getItem('taskDuckHistory') || '[]');
+  h.splice(idx, 1);
+  localStorage.setItem('taskDuckHistory', JSON.stringify(h));
+  renderHistory();
+}
+
+function toggleHistory() {
+  document.getElementById('historyPanel').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+
+// ============================================
+// ALERTS
+// ============================================
+function showCreepCustom(msg) {
+  document.getElementById('creepMessage').textContent = msg;
+  document.getElementById('creepAlert').classList.add('show');
+  setTimeout(hideCreep, 6000);
+}
+function hideCreep() { document.getElementById('creepAlert').classList.remove('show'); }
+
+// ============================================
+// RESET
+// ============================================
+function resetAll() {
+  document.getElementById('stepsContainer').style.display = '';
+  document.getElementById('completionZone').classList.remove('visible');
+  for (let i = 1; i <= 4; i++) document.getElementById(`step${i}`).classList.remove('completed','active');
+  ['taskIdField','taskTitleField','rawTaskField','askField','deliverableField','notAskedField','parkingLot'].forEach(id => { document.getElementById(id).value = ''; });
+  if (document.getElementById('peerWho')) document.getElementById('peerWho').value = '';
+  if (document.getElementById('peerAsked')) document.getElementById('peerAsked').value = '';
+  document.getElementById('step1Btn').disabled = true;
+  document.getElementById('step2Btn').disabled = true;
+  document.getElementById('step4Btn').disabled = true;
+  document.getElementById('scopeList').innerHTML = `
+    <div class="scope-item"><input type="text" placeholder="I will do this..." oninput="checkScope()"><input type="number" placeholder="min" min="1" max="480" oninput="updateTimeSummary()"><span class="time-label">min</span><button class="remove-btn" onclick="removeScope(this)">×</button></div>
+    <div class="scope-item"><input type="text" placeholder="I will do this..." oninput="checkScope()"><input type="number" placeholder="min" min="1" max="480" oninput="updateTimeSummary()"><span class="time-label">min</span><button class="remove-btn" onclick="removeScope(this)">×</button></div>
+    <div class="scope-item"><input type="text" placeholder="I will do this..." oninput="checkScope()"><input type="number" placeholder="min" min="1" max="480" oninput="updateTimeSummary()"><span class="time-label">min</span><button class="remove-btn" onclick="removeScope(this)">×</button></div>
+  `;
+  document.getElementById('addScopeBtn').style.display = '';
+  document.getElementById('totalTime').textContent = '0 min';
+  document.getElementById('totalTime').className = 'ts-value';
+  diffItems = []; workSeconds = 0;
+  stopWorkTimer(); stopCheckpoints();
+  activateStep(1);
+  duckSay("Fresh task! Let's do this right. Paste the original task on the left. 🦆");
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// Init
+renderHistory();
+activateStep(1);
+</script>
+</body>
+</html>
