@@ -262,20 +262,49 @@ class DataMasker {
 // ============================================================
 // VERIFICATION PROMPT
 // ============================================================
-const SYS_PROMPT = `You are a Task Understanding Verifier for "Task Duck." Compare an ORIGINAL task against the architect's REWRITTEN understanding and detect semantic drift, scope additions, missing requirements, or misinterpretations.
+const SYS_PROMPT = `You are a Task Understanding Verifier for "Task Duck." Compare an ORIGINAL task against the architect's REWRITTEN understanding. Detect semantic drift, scope additions, missing requirements, misinterpretations, AND spelling/grammar issues.
 
-Evaluate: 1) INTENT MATCH 2) SCOPE DRIFT (architect's #1 weakness) 3) MISSING ITEMS 4) ASSUMPTIONS 5) SPECIFICITY
+Evaluate: 1) INTENT MATCH 2) SCOPE DRIFT (architect's #1 weakness — be STRICT) 3) MISSING ITEMS 4) ASSUMPTIONS 5) DEFINITION OF DONE quality 6) SPELLING & GRAMMAR in the rewrite
 
-Respond ONLY with valid JSON:
-{"verdict":"match"|"drift"|"missing"|"major_mismatch","confidence":0.0-1.0,"summary":"...","intent_match":{"status":"aligned"|"partial"|"misaligned","detail":"..."},"scope_drift":{"detected":bool,"items":[]},"missing_items":{"detected":bool,"items":[]},"assumptions":{"detected":bool,"items":[]},"suggestions":[],"duck_quote":"..."}
+Respond ONLY with valid JSON (no fences, no preamble):
+{
+  "verdict": "match" | "drift" | "missing" | "major_mismatch",
+  "confidence": 0.0-1.0,
+  "summary": "One sentence assessment",
+  "intent_match": {"status": "aligned"|"partial"|"misaligned", "detail": "..."},
+  "scope_drift": {"detected": bool, "items": ["things ADDED not in original"]},
+  "missing_items": {"detected": bool, "items": ["things in original that are MISSED"]},
+  "assumptions": {"detected": bool, "items": ["assumptions not in original"]},
+  "definition_of_done": {"clear": bool, "suggestion": "how to make it more specific if vague"},
+  "spelling_grammar": {"issues": ["list of typos or grammar fixes, empty if clean"]},
+  "suggestions": ["actionable fixes for the rewrite"],
+  "duck_quote": "short duck-themed reminder specific to the issue found"
+}
 
-Rules: Be STRICT on scope drift. Verb changes matter. Placeholders like [SERVICE_A] are masked data.`;
+Rules: Be STRICT on scope drift. Verb changes matter ("add" vs "redesign"). Placeholders like [SERVICE_A] are masked sensitive data — analyze structure not values.`;
 
-const USR_TMPL = `## ORIGINAL TASK\n{ORIGINAL}\n\n## ARCHITECT'S REWRITE\n{REWRITE}\n\n## DELIVERABLE\n{DELIVERABLE}\n\n## NOT IN SCOPE\n{NOT_ASKED}\n\nDetect drift, missing items, assumptions. Be strict.`;
+const USR_TMPL = `## ORIGINAL TASK (verbatim from ticket)
+{ORIGINAL}
+
+## ARCHITECT'S REWRITTEN UNDERSTANDING
+{REWRITE}
+
+## STATED DELIVERABLE
+{DELIVERABLE}
+
+## DEFINITION OF DONE
+{DOD}
+
+## STATED "NOT IN SCOPE"
+{NOT_ASKED}
+
+Compare original against rewrite. Detect drift, missing items, assumptions. Check if Definition of Done is specific and verifiable. Flag spelling/grammar issues in the rewrite. Be strict about scope additions.`;
 
 // ============================================================
 // LLM PROVIDERS
 // ============================================================
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+
 async function callAnthropic(s, u) {
   const r = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'}, body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:s,messages:[{role:'user',content:u}]}) });
   const d = await r.json(); if(d.error) throw new Error(`Anthropic: ${d.error.message}`); return d.content?.[0]?.text||'';
@@ -288,12 +317,16 @@ async function callGemini(s, u) {
   const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system_instruction:{parts:[{text:s}]},contents:[{parts:[{text:u}]}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:1500}}) });
   const d = await r.json(); if(d.error) throw new Error(`Gemini: ${d.error.message}`); return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
 }
-const providers = { anthropic:callAnthropic, openai:callOpenAI, gemini:callGemini };
+async function callCopilot(s, u) {
+  const r = await fetch('https://api.githubcopilot.com/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${GITHUB_TOKEN}`,'Editor-Version':'task-duck/4.0','Copilot-Integration-Id':'task-duck-verifier'}, body:JSON.stringify({model:'gpt-4o',max_tokens:1500,messages:[{role:'system',content:s},{role:'user',content:u}]}) });
+  const d = await r.json(); if(d.error) throw new Error(`Copilot: ${d.error?.message||JSON.stringify(d.error)}`); return d.choices?.[0]?.message?.content||'';
+}
+const providers = { anthropic:callAnthropic, openai:callOpenAI, gemini:callGemini, copilot:callCopilot };
 
 // ============================================================
 // ROUTES
 // ============================================================
-app.get('/api/health', (_,r) => r.json({status:'ok',version:'3.2.0'}));
+app.get('/api/health', (_,r) => r.json({status:'ok',version:'4.0.0'}));
 
 // Challenge
 app.get('/api/auth/challenge', (req, res) => {
@@ -334,23 +367,29 @@ app.get('/api/providers', requireAuth, (_,r) => {
   if(ANTHROPIC_API_KEY) a.push({id:'anthropic',name:'Claude (Anthropic)',model:'claude-sonnet-4'});
   if(OPENAI_API_KEY) a.push({id:'openai',name:'GPT-4o (OpenAI)',model:'gpt-4o'});
   if(GEMINI_API_KEY) a.push({id:'gemini',name:'Gemini 2.0 Flash',model:'gemini-2.0-flash'});
+  if(GITHUB_TOKEN) a.push({id:'copilot',name:'GitHub Copilot',model:'copilot'});
   r.json({providers:a});
 });
 
 // Verify
 app.post('/api/verify', requireAuth, async (req, res) => {
-  const {provider,original,rewrite,deliverable,notAsked} = req.body;
+  const {provider,original,rewrite,deliverable,notAsked,definitionOfDone} = req.body;
   if(!provider||!original||!rewrite) return res.status(400).json({error:'Missing fields'});
   if(!providers[provider]) return res.status(400).json({error:`Unknown: ${provider}`});
-  const key={anthropic:ANTHROPIC_API_KEY,openai:OPENAI_API_KEY,gemini:GEMINI_API_KEY}[provider];
+  const key={anthropic:ANTHROPIC_API_KEY,openai:OPENAI_API_KEY,gemini:GEMINI_API_KEY,copilot:GITHUB_TOKEN}[provider];
   if(!key) return res.status(400).json({error:`${provider} not configured`});
   try {
     const m = new DataMasker(CUSTOM_MASKS_RAW);
-    const up = USR_TMPL.replace('{ORIGINAL}',m.mask(original)).replace('{REWRITE}',m.mask(rewrite)).replace('{DELIVERABLE}',m.mask(deliverable||'')||'(none)').replace('{NOT_ASKED}',m.mask(notAsked||'')||'(none)');
+    const up = USR_TMPL
+      .replace('{ORIGINAL}',m.mask(original))
+      .replace('{REWRITE}',m.mask(rewrite))
+      .replace('{DELIVERABLE}',m.mask(deliverable||'')||'(none)')
+      .replace('{DOD}',m.mask(definitionOfDone||'')||'(not specified)')
+      .replace('{NOT_ASKED}',m.mask(notAsked||'')||'(none)');
     const raw = await providers[provider](SYS_PROMPT, up);
     let p; try{p=JSON.parse(raw.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim());}catch{p={verdict:'error',summary:'Parse failed'};}
     const um=(o,k)=>{if(o?.[k])o[k]=Array.isArray(o[k])?o[k].map(i=>m.unmask(i)):m.unmask(o[k]);};
-    um(p.scope_drift,'items');um(p.missing_items,'items');um(p.assumptions,'items');um(p,'suggestions');um(p,'summary');um(p,'duck_quote');um(p?.intent_match,'detail');
+    um(p.scope_drift,'items');um(p.missing_items,'items');um(p.assumptions,'items');um(p,'suggestions');um(p,'summary');um(p,'duck_quote');um(p?.intent_match,'detail');um(p?.definition_of_done,'suggestion');um(p,'spelling_grammar');
     res.json({result:p,masking:{itemsMasked:m.map.size,report:m.report()},provider});
   } catch(e) { console.error(`[verify] ${provider}:`,e.message); res.status(500).json({error:e.message}); }
 });
@@ -364,9 +403,9 @@ if (!PASSWORD_VERIFIER) console.warn('\n⚠️  PASSWORD_VERIFIER not set! Run: 
 if (!BCRYPT_SALT) console.warn('⚠️  BCRYPT_SALT not set! Run: node hash-password.js --gen-salt\n');
 
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🦆 Task Duck v3.2.0 — port ${PORT}`);
-  console.log(`   Auth: ${PASSWORD_VERIFIER ? '✓ bcrypt challenge-response (cost '+BCRYPT_COST+')' : '⚠ Open'}`);
-  console.log(`   Providers: ${[ANTHROPIC_API_KEY?'✓ Claude':'✗ Claude',OPENAI_API_KEY?'✓ OpenAI':'✗ OpenAI',GEMINI_API_KEY?'✓ Gemini':'✗ Gemini'].join(' | ')}`);
+  console.log(`\n🦆 Task Duck v4.0.0 — port ${PORT}`);
+  console.log(`   Auth: ${PASSWORD_VERIFIER ? '✓ bcrypt challenge-response' : '⚠ Open'}`);
+  console.log(`   Providers: ${[ANTHROPIC_API_KEY?'✓ Claude':'✗ Claude',OPENAI_API_KEY?'✓ OpenAI':'✗ OpenAI',GEMINI_API_KEY?'✓ Gemini':'✗ Gemini',GITHUB_TOKEN?'✓ Copilot':'✗ Copilot'].join(' | ')}`);
   console.log(`   Masking: ${CUSTOM_MASKS_RAW ? `✓ ${CUSTOM_MASKS_RAW.split(',').length} custom` : '✓ Auto'}\n`);
 });
 
