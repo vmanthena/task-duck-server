@@ -36,10 +36,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS — block cross-origin API calls
+// CORS — block cross-origin API calls but allow same-origin
 app.use((req, res, next) => {
-  if (req.headers.origin && req.path.startsWith('/api/')) {
-    return res.status(403).json({ error: 'Cross-origin not allowed' });
+  const origin = req.headers.origin;
+  if (origin && req.path.startsWith('/api/')) {
+    // Allow if origin matches the host
+    const host = req.headers.host;
+    try {
+      const originHost = new URL(origin).host;
+      if (originHost !== host) {
+        return res.status(403).json({ error: 'Cross-origin not allowed' });
+      }
+    } catch {
+      // If we can't parse, let it through (same-origin requests may have odd origins)
+    }
   }
   next();
 });
