@@ -24,29 +24,34 @@ Task Duck is a self-hosted web app that forces disciplined task execution throug
 # 1. Clone / copy the project
 cd task-duck-server
 
-# 2. Copy env template
-cp .env.example .env
+# 2. Install dependencies
+npm install
 
-# 3. Start the server (first run — no auth for setup)
+# 3. Generate your password hash (interactive, masked input)
+node hash-password.js
+# Or directly:
+node hash-password.js "your-secure-password"
+
+# 4. Copy .env template and paste the hash
+cp .env.example .env
+# Edit .env → set PASSWORD_HASH, API keys, optional CUSTOM_MASKS
+
+# 5. Run with Docker
 docker compose up -d
 
-# 4. Generate your password hash
-curl -X POST http://localhost:3456/api/hash-password \
-  -H "Content-Type: application/json" \
-  -d '{"password":"your-secure-password"}'
+# 6. Access at https://your-domain:3456
+```
 
-# 5. Copy the hash into .env
-# PASSWORD_HASH=scrypt:salt:hash
+### Generate hash inside Docker (no local Node needed)
 
-# 6. Add your API keys to .env
-# ANTHROPIC_API_KEY=sk-ant-...
-# OPENAI_API_KEY=sk-...
-# GEMINI_API_KEY=AI...
+```bash
+docker compose run --rm task-duck node hash-password.js
+```
 
-# 7. Restart
-docker compose down && docker compose up -d
+### Verify a hash
 
-# 8. Access at https://your-domain:3456
+```bash
+node hash-password.js --verify "my-password" '$argon2id$v=19$m=131072,t=5,p=8$...'
 ```
 
 ## Environment Variables

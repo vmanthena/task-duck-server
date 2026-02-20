@@ -2,61 +2,254 @@ import express from 'express';
 import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
+import 'dotenv/config';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// ============================================================
+// SECURITY MIDDLEWARE
+// ============================================================
+
+// Body parsing with size limits
 app.use(express.json({ limit: '50kb' }));
+
+// Security headers (helmet-lite, zero deps)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'"
+  ].join('; '));
+  // Prevent MIME sniffing
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
+
+// CORS — only allow same-origin (no cross-origin API access)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    // Block all cross-origin requests to API routes
+    if (req.path.startsWith('/api/')) {
+      return res.status(403).json({ error: 'Cross-origin requests not allowed' });
+    }
+  }
+  next();
+});
+
+// ============================================================
+// IP RATE LIMITING — 3 failed login attempts = 20 min lockout
+// ============================================================
+const loginAttempts = new Map(); // ip -> { count, lockedUntil }
+const MAX_ATTEMPTS = 3;
+const LOCKOUT_MS = 20 * 60 * 1000; // 20 minutes
+
+function getClientIP(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+    || req.headers['x-real-ip']
+    || req.socket.remoteAddress
+    || 'unknown';
+}
+
+function isIPLocked(ip) {
+  const record = loginAttempts.get(ip);
+  if (!record) return false;
+  if (record.lockedUntil && Date.now() < record.lockedUntil) return true;
+  if (record.lockedUntil && Date.now() >= record.lockedUntil) {
+    loginAttempts.delete(ip);
+    return false;
+  }
+  return false;
+}
+
+function recordFailedAttempt(ip) {
+  const record = loginAttempts.get(ip) || { count: 0, lockedUntil: null };
+  record.count++;
+  if (record.count >= MAX_ATTEMPTS) {
+    record.lockedUntil = Date.now() + LOCKOUT_MS;
+    console.warn(`[auth] IP ${ip} locked for 20 min after ${record.count} failed attempts`);
+  }
+  loginAttempts.set(ip, record);
+  return record;
+}
+
+function clearAttempts(ip) {
+  loginAttempts.delete(ip);
+}
+
+function getRemainingLockout(ip) {
+  const record = loginAttempts.get(ip);
+  if (!record?.lockedUntil) return 0;
+  return Math.max(0, Math.ceil((record.lockedUntil - Date.now()) / 1000));
+}
+
+// Cleanup stale lockout records every 5 min
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of loginAttempts) {
+    if (data.lockedUntil && now > data.lockedUntil + 60000) loginAttempts.delete(ip);
+  }
+}, 300000);
+
+// ============================================================
+// INPUT SANITIZATION — strip HTML/script injection
+// ============================================================
+function sanitize(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/[<>]/g, '')           // strip angle brackets
+    .replace(/javascript:/gi, '')    // strip js: protocol
+    .replace(/on\w+\s*=/gi, '')      // strip event handlers
+    .replace(/data:/gi, '')          // strip data: protocol
+    .substring(0, 10000);            // hard length cap
+}
+
+function sanitizeBody(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const clean = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (typeof val === 'string') clean[key] = sanitize(val);
+    else if (typeof val === 'number') clean[key] = val;
+    else if (typeof val === 'boolean') clean[key] = val;
+    // drop anything else
+  }
+  return clean;
+}
+
+// Apply sanitization to all POST requests
+app.use((req, res, next) => {
+  if (req.method === 'POST' && req.body) {
+    req.body = sanitizeBody(req.body);
+  }
+  next();
+});
+
+// Serve static files
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ============================================================
-// CONFIG — loaded from environment
+// CONFIG
 // ============================================================
-const PORT = process.env.PORT || 3000;
-const PASSWORD_HASH = process.env.PASSWORD_HASH;           // Argon2 hash
+const PORT = process.env.PORT || 8080;
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const SESSION_HOURS = parseInt(process.env.SESSION_HOURS || '24');
 
-// LLM API Keys (all optional — only configured providers are available)
+// Auth: PASSWORD_VERIFIER = hex(sha256(argon2id(sha256(password), salt, params)))
+// Generated by: node hash-password.js
+const PASSWORD_VERIFIER = process.env.PASSWORD_VERIFIER || '';
+
+// LLM API Keys
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
-// Custom mask dictionary (comma-separated key=replacement pairs)
-// e.g. "myservice=SERVICE_A,prod-db-01=DATABASE_1"
+// Custom mask dictionary
 const CUSTOM_MASKS_RAW = process.env.CUSTOM_MASKS || '';
 
-// ============================================================
-// ARGON2 — using Node's built-in crypto (scrypt-based)
-// For true Argon2, install 'argon2' package. This uses scrypt
-// as a zero-dependency alternative with similar security.
-// ============================================================
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-  return `scrypt:${salt}:${hash}`;
-}
+// Argon2 params — sent to client so it can compute the same hash
+const ARGON2_SALT = process.env.ARGON2_SALT || 'task-duck-v3-default-salt';
+const ARGON2_PARAMS = {
+  timeCost: 5,
+  memoryCost: 131072,  // 128MB in KB
+  parallelism: 8,
+  hashLength: 64,
+  type: 'argon2id',
+  salt: ARGON2_SALT,
+};
 
-function verifyPassword(password, stored) {
-  if (!stored) return false;
-  const parts = stored.split(':');
-  if (parts[0] === 'scrypt' && parts.length === 3) {
-    const hash = crypto.scryptSync(password, parts[1], 64).toString('hex');
-    return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(parts[2]));
+// ============================================================
+// NONCE STORE — single-use, 30s TTL
+// ============================================================
+const nonceStore = new Map();
+const NONCE_TTL_MS = 30000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [nonce, data] of nonceStore) {
+    if (now - data.created > NONCE_TTL_MS * 2) nonceStore.delete(nonce);
   }
-  // Support raw argon2 hashes if argon2 package installed
-  return false;
+}, 60000);
+
+// ============================================================
+// CHALLENGE-RESPONSE AUTH
+//
+//  CLIENT (browser, WASM argon2):              SERVER:
+//  ─────────────────────────────               ──────
+//  GET /api/auth/challenge          ──────►    generate nonce + timestamp
+//                                   ◄──────    { nonce, timestamp, argon2Params }
+//
+//  step1 = sha256(password)           (hex)
+//  step2 = argon2id(step1, salt)      (hex)    ← same params + salt as CLI
+//  verifier = sha256(step2)           (hex)
+//  proof = sha256(verifier+nonce+ts)  (hex)
+//
+//  POST /api/auth/login { proof, ts } ──────►  expected = sha256(VERIFIER+nonce+ts)
+//                                              compare proof === expected
+//                                   ◄──────    { token } or 401
+//
+// NEVER leaves browser: password, sha256(password), argon2 output
+// Over the wire: only proof (one-time sha256 hash, replay-proof)
+// Stored on server: only PASSWORD_VERIFIER (sha256 of argon2 output)
+// ============================================================
+
+function verifyProof(proof, timestamp) {
+  if (!proof || !timestamp || !PASSWORD_VERIFIER) return false;
+
+  const ts = parseInt(timestamp);
+  if (isNaN(ts) || Date.now() - ts > NONCE_TTL_MS) return false;
+
+  // Find matching unused nonce
+  let matchedNonce = null;
+  for (const [nonce, data] of nonceStore) {
+    if (data.timestamp === timestamp && !data.used) {
+      matchedNonce = nonce;
+      break;
+    }
+  }
+  if (!matchedNonce) return false;
+
+  const nonceData = nonceStore.get(matchedNonce);
+  if (Date.now() - nonceData.created > NONCE_TTL_MS) {
+    nonceStore.delete(matchedNonce);
+    return false;
+  }
+
+  // expected = sha256(PASSWORD_VERIFIER + nonce + timestamp)
+  const expected = crypto.createHash('sha256')
+    .update(PASSWORD_VERIFIER + matchedNonce + timestamp)
+    .digest('hex');
+
+  if (proof.length !== expected.length) return false;
+  let valid;
+  try {
+    valid = crypto.timingSafeEqual(Buffer.from(proof, 'hex'), Buffer.from(expected, 'hex'));
+  } catch { return false; }
+
+  if (valid) nonceData.used = true;
+  return valid;
 }
 
 // ============================================================
-// JWT-LIKE SESSION TOKENS (HMAC-based, zero-dependency)
+// JWT SESSION TOKENS
 // ============================================================
 function createToken() {
   const payload = {
     iat: Date.now(),
     exp: Date.now() + SESSION_HOURS * 3600000,
-    nonce: crypto.randomBytes(8).toString('hex')
+    jti: crypto.randomBytes(8).toString('hex')
   };
   const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig = crypto.createHmac('sha256', JWT_SECRET).update(data).digest('base64url');
@@ -67,15 +260,14 @@ function verifyToken(token) {
   if (!token) return false;
   const [data, sig] = token.split('.');
   if (!data || !sig) return false;
-  const expected = crypto.createHmac('sha256', JWT_SECRET).update(data).digest('base64url');
-  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false;
   try {
+    const expected = crypto.createHmac('sha256', JWT_SECRET).update(data).digest('base64url');
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false;
     const payload = JSON.parse(Buffer.from(data, 'base64url').toString());
     return payload.exp > Date.now();
   } catch { return false; }
 }
 
-// Auth middleware
 function requireAuth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!verifyToken(token)) return res.status(401).json({ error: 'Unauthorized' });
@@ -87,11 +279,9 @@ function requireAuth(req, res, next) {
 // ============================================================
 class DataMasker {
   constructor(customMasks = '') {
-    this.map = new Map();       // original -> placeholder
-    this.reverseMap = new Map(); // placeholder -> original
+    this.map = new Map();
+    this.reverseMap = new Map();
     this.counter = {};
-
-    // Parse custom masks from env
     this.customDict = new Map();
     if (customMasks) {
       customMasks.split(',').forEach(pair => {
@@ -99,80 +289,54 @@ class DataMasker {
         if (key && val) this.customDict.set(key.toLowerCase(), val);
       });
     }
-
-    // Regex patterns for auto-detection
     this.patterns = [
-      { name: 'EMAIL',    regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z]{2,}\b/gi },
-      { name: 'IP',       regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g },
-      { name: 'URL',      regex: /https?:\/\/[^\s<>"']+/gi },
-      { name: 'API_KEY',  regex: /\b(?:sk-|ak-|key-|token-)[A-Za-z0-9_-]{10,}\b/gi },
-      { name: 'UUID',     regex: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi },
-      { name: 'DB_CONN',  regex: /(?:mongodb|postgres|mysql|redis|mssql):\/\/[^\s<>"']+/gi },
-      { name: 'PATH',     regex: /(?:\/[a-zA-Z0-9._-]+){3,}/g },
-      { name: 'PHONE',    regex: /\b(?:\+1[-.]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g },
-      { name: 'SSN',      regex: /\b\d{3}-\d{2}-\d{4}\b/g },
-      { name: 'AWS_ARN',  regex: /arn:aws[a-zA-Z-]*:[a-zA-Z0-9-]+:\S+/gi },
-      { name: 'K8S_NS',   regex: /\b(?:namespace|ns)[:\s=]+["']?([a-z0-9-]+)["']?/gi },
+      { name: 'EMAIL',   regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z]{2,}\b/gi },
+      { name: 'IP',      regex: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g },
+      { name: 'URL',     regex: /https?:\/\/[^\s<>"']+/gi },
+      { name: 'API_KEY', regex: /\b(?:sk-|ak-|key-|token-)[A-Za-z0-9_-]{10,}\b/gi },
+      { name: 'UUID',    regex: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi },
+      { name: 'DB_CONN', regex: /(?:mongodb|postgres|mysql|redis|mssql):\/\/[^\s<>"']+/gi },
+      { name: 'PATH',    regex: /(?:\/[a-zA-Z0-9._-]+){3,}/g },
+      { name: 'PHONE',   regex: /\b(?:\+1[-.]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g },
+      { name: 'SSN',     regex: /\b\d{3}-\d{2}-\d{4}\b/g },
+      { name: 'AWS_ARN', regex: /arn:aws[a-zA-Z-]*:[a-zA-Z0-9-]+:\S+/gi },
+      { name: 'K8S_NS',  regex: /\b(?:namespace|ns)[:\s=]+["']?([a-z0-9-]+)["']?/gi },
     ];
   }
 
-  _getPlaceholder(category) {
-    if (!this.counter[category]) this.counter[category] = 0;
-    this.counter[category]++;
-    return `[${category}_${this.counter[category]}]`;
-  }
+  _ph(cat) { this.counter[cat] = (this.counter[cat] || 0) + 1; return `[${cat}_${this.counter[cat]}]`; }
 
   mask(text) {
     if (!text) return text;
-    let masked = text;
-
-    // Apply custom dictionary first (case-insensitive)
-    for (const [term, replacement] of this.customDict) {
-      const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-      masked = masked.replace(regex, (match) => {
-        const ph = `[${replacement}]`;
-        this.map.set(match, ph);
-        this.reverseMap.set(ph, match);
-        return ph;
-      });
+    let m = text;
+    for (const [term, repl] of this.customDict) {
+      const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      m = m.replace(rx, (match) => { const p = `[${repl}]`; this.map.set(match, p); this.reverseMap.set(p, match); return p; });
     }
-
-    // Apply regex patterns
     for (const { name, regex } of this.patterns) {
-      masked = masked.replace(regex, (match) => {
-        // Skip if already masked
+      m = m.replace(regex, (match) => {
         if (match.startsWith('[') && match.endsWith(']')) return match;
         if (this.map.has(match)) return this.map.get(match);
-        const ph = this._getPlaceholder(name);
-        this.map.set(match, ph);
-        this.reverseMap.set(ph, match);
-        return ph;
+        const p = this._ph(name); this.map.set(match, p); this.reverseMap.set(p, match); return p;
       });
     }
-
-    return masked;
+    return m;
   }
 
   unmask(text) {
     if (!text) return text;
-    let unmasked = text;
-    for (const [ph, original] of this.reverseMap) {
-      unmasked = unmasked.replaceAll(ph, original);
-    }
-    return unmasked;
+    let u = text;
+    for (const [ph, orig] of this.reverseMap) u = u.replaceAll(ph, orig);
+    return u;
   }
 
   getMaskReport() {
-    const report = [];
-    for (const [original, placeholder] of this.map) {
-      report.push({ original: original.substring(0, 3) + '***', placeholder });
-    }
-    return report;
+    return [...this.map].map(([orig, ph]) => ({ original: orig.substring(0, 3) + '***', placeholder: ph }));
   }
 }
 
 // ============================================================
-// THE VERIFICATION PROMPT — carefully engineered
+// VERIFICATION PROMPT
 // ============================================================
 const SYSTEM_PROMPT = `You are a Task Understanding Verifier for a software architect's workflow tool called "Task Duck." Your job is critical: compare an ORIGINAL task description against the architect's REWRITTEN understanding and detect any semantic drift, scope additions, missing requirements, or misinterpretations.
 
@@ -180,10 +344,8 @@ You serve as a rubber duck that catches the gap between "what was asked" and "wh
 
 ## Your Analysis Framework
 
-For each comparison, evaluate these dimensions:
-
 1. **INTENT MATCH** — Does the rewrite capture the core intent of the original?
-2. **SCOPE DRIFT** — Did the architect ADD anything not in the original? (This is the #1 problem to catch)
+2. **SCOPE DRIFT** — Did the architect ADD anything not in the original? (#1 problem to catch)
 3. **MISSING ITEMS** — Did the architect OMIT anything from the original?
 4. **ASSUMPTION FLAGS** — Did the architect make assumptions not supported by the original text?
 5. **SPECIFICITY CHECK** — Is the rewrite more specific OR more vague than the original?
@@ -196,34 +358,20 @@ Respond ONLY with valid JSON (no markdown fences, no preamble):
   "verdict": "match" | "drift" | "missing" | "major_mismatch",
   "confidence": 0.0-1.0,
   "summary": "One sentence overall assessment",
-  "intent_match": {
-    "status": "aligned" | "partial" | "misaligned",
-    "detail": "Explanation"
-  },
-  "scope_drift": {
-    "detected": true/false,
-    "items": ["List of things architect ADDED that aren't in original"]
-  },
-  "missing_items": {
-    "detected": true/false,
-    "items": ["List of things in original that architect MISSED"]
-  },
-  "assumptions": {
-    "detected": true/false,
-    "items": ["List of assumptions not supported by original"]
-  },
+  "intent_match": { "status": "aligned" | "partial" | "misaligned", "detail": "Explanation" },
+  "scope_drift": { "detected": true/false, "items": ["things architect ADDED not in original"] },
+  "missing_items": { "detected": true/false, "items": ["things in original architect MISSED"] },
+  "assumptions": { "detected": true/false, "items": ["assumptions not supported by original"] },
   "suggestions": ["Actionable suggestions to fix the rewrite"],
-  "duck_quote": "A short, direct duck-themed reminder about the specific issue found (or encouragement if it matches)"
+  "duck_quote": "A short duck-themed reminder about the specific issue (or encouragement if match)"
 }
 
 ## Rules
-- Be STRICT about scope drift — this is the architect's known weakness
-- Even small additions count as drift (e.g., "update config" vs "refactor config service")
+- Be STRICT about scope drift — the architect's known weakness
+- Even small additions count as drift
 - Verb changes matter: "add" vs "redesign", "fix" vs "rewrite", "update" vs "migrate"
-- If deliverable is mentioned in original, verify the rewrite matches it exactly
-- Note placeholders like [SERVICE_A] are masked sensitive data — analyze the structure, not the placeholder values
-- Keep suggestions concrete and actionable
-- The duck_quote should be memorable and specific to the issue found`;
+- Placeholders like [SERVICE_A] are masked sensitive data — analyze structure not values
+- Keep suggestions concrete and actionable`;
 
 const USER_PROMPT_TEMPLATE = `## ORIGINAL TASK (verbatim from ticket)
 {ORIGINAL}
@@ -240,226 +388,177 @@ const USER_PROMPT_TEMPLATE = `## ORIGINAL TASK (verbatim from ticket)
 Compare the original against the rewrite. Detect any drift, missing items, or assumptions. Be strict about scope additions.`;
 
 // ============================================================
-// LLM PROVIDER CALLS
+// LLM PROVIDERS
 // ============================================================
-async function callAnthropic(systemPrompt, userPrompt) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+async function callAnthropic(sys, usr) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'prompt-caching-2024-07-31'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
-      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: userPrompt }],
-      metadata: { user_id: 'task-duck' }
-    })
+    headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, system: sys, messages: [{ role: 'user', content: usr }] })
   });
-  const data = await res.json();
-  if (data.error) throw new Error(`Anthropic: ${data.error.message}`);
-  return data.content?.[0]?.text || '';
+  const d = await r.json();
+  if (d.error) throw new Error(`Anthropic: ${d.error.message}`);
+  return d.content?.[0]?.text || '';
 }
 
-async function callOpenAI(systemPrompt, userPrompt) {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+async function callOpenAI(sys, usr) {
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      max_tokens: 1500,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ]
-    })
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+    body: JSON.stringify({ model: 'gpt-4o', max_tokens: 1500, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] })
   });
-  const data = await res.json();
-  if (data.error) throw new Error(`OpenAI: ${data.error.message}`);
-  return data.choices?.[0]?.message?.content || '';
+  const d = await r.json();
+  if (d.error) throw new Error(`OpenAI: ${d.error.message}`);
+  return d.choices?.[0]?.message?.content || '';
 }
 
-async function callGemini(systemPrompt, userPrompt) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: [{ text: userPrompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          maxOutputTokens: 1500
-        }
-      })
-    }
-  );
-  const data = await res.json();
-  if (data.error) throw new Error(`Gemini: ${data.error.message}`);
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+async function callGemini(sys, usr) {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ system_instruction: { parts: [{ text: sys }] }, contents: [{ parts: [{ text: usr }] }], generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 1500 } })
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(`Gemini: ${d.error.message}`);
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
-const providers = {
-  anthropic: callAnthropic,
-  openai: callOpenAI,
-  gemini: callGemini
-};
+const providers = { anthropic: callAnthropic, openai: callOpenAI, gemini: callGemini };
 
 // ============================================================
 // ROUTES
 // ============================================================
+app.get('/api/health', (_, res) => res.json({ status: 'ok', version: '3.1.0' }));
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '3.0.0' });
-});
-
-// Login
-app.post('/api/login', (req, res) => {
-  const { password } = req.body;
-  if (!password || !verifyPassword(password, PASSWORD_HASH)) {
-    // Constant-time delay to prevent timing attacks
-    return setTimeout(() => res.status(401).json({ error: 'Invalid password' }), 500);
+// Challenge — check IP lockout before issuing
+app.get('/api/auth/challenge', (req, res) => {
+  const ip = getClientIP(req);
+  if (isIPLocked(ip)) {
+    const remaining = getRemainingLockout(ip);
+    return res.status(429).json({
+      error: 'Too many failed attempts',
+      lockedFor: remaining,
+      retryAfter: remaining
+    });
   }
-  const token = createToken();
-  res.json({ token, expiresIn: SESSION_HOURS * 3600 });
+  const nonce = crypto.randomBytes(32).toString('hex');
+  const timestamp = String(Date.now());
+  nonceStore.set(nonce, { timestamp, created: Date.now(), used: false });
+  res.json({ nonce, timestamp, argon2Params: ARGON2_PARAMS });
 });
 
-// Get available providers
-app.get('/api/providers', requireAuth, (req, res) => {
-  const available = [];
-  if (ANTHROPIC_API_KEY) available.push({ id: 'anthropic', name: 'Claude (Anthropic)', model: 'claude-sonnet-4' });
-  if (OPENAI_API_KEY) available.push({ id: 'openai', name: 'GPT-4o (OpenAI)', model: 'gpt-4o' });
-  if (GEMINI_API_KEY) available.push({ id: 'gemini', name: 'Gemini 2.0 Flash', model: 'gemini-2.0-flash' });
-  res.json({ providers: available });
+// Login (proof verification) — with IP lockout
+app.post('/api/auth/login', (req, res) => {
+  const ip = getClientIP(req);
+
+  if (isIPLocked(ip)) {
+    const remaining = getRemainingLockout(ip);
+    return res.status(429).json({
+      error: 'Too many failed attempts',
+      lockedFor: remaining,
+      retryAfter: remaining
+    });
+  }
+
+  const { proof, timestamp } = req.body;
+
+  // Input validation
+  if (proof && (typeof proof !== 'string' || !/^[a-f0-9]{64}$/.test(proof))) {
+    return res.status(400).json({ error: 'Invalid proof format' });
+  }
+  if (timestamp && (typeof timestamp !== 'string' || !/^\d{13}$/.test(timestamp))) {
+    return res.status(400).json({ error: 'Invalid timestamp format' });
+  }
+
+  if (!PASSWORD_VERIFIER) {
+    return res.json({ token: createToken(), expiresIn: SESSION_HOURS * 3600 });
+  }
+
+  if (!verifyProof(proof, timestamp)) {
+    const record = recordFailedAttempt(ip);
+    const remaining = MAX_ATTEMPTS - record.count;
+    return setTimeout(() => {
+      if (record.lockedUntil) {
+        res.status(429).json({
+          error: 'Too many failed attempts',
+          lockedFor: getRemainingLockout(ip),
+          retryAfter: getRemainingLockout(ip)
+        });
+      } else {
+        res.status(401).json({
+          error: 'Invalid credentials',
+          attemptsRemaining: Math.max(0, remaining)
+        });
+      }
+    }, 500);
+  }
+
+  clearAttempts(ip);
+  res.json({ token: createToken(), expiresIn: SESSION_HOURS * 3600 });
 });
 
-// Verify understanding — the core endpoint
+// Providers
+app.get('/api/providers', requireAuth, (_, res) => {
+  const a = [];
+  if (ANTHROPIC_API_KEY) a.push({ id: 'anthropic', name: 'Claude (Anthropic)', model: 'claude-sonnet-4' });
+  if (OPENAI_API_KEY) a.push({ id: 'openai', name: 'GPT-4o (OpenAI)', model: 'gpt-4o' });
+  if (GEMINI_API_KEY) a.push({ id: 'gemini', name: 'Gemini 2.0 Flash', model: 'gemini-2.0-flash' });
+  res.json({ providers: a });
+});
+
+// Verify understanding
 app.post('/api/verify', requireAuth, async (req, res) => {
   const { provider, original, rewrite, deliverable, notAsked } = req.body;
-
-  if (!provider || !original || !rewrite) {
-    return res.status(400).json({ error: 'Missing required fields: provider, original, rewrite' });
-  }
-
-  if (!providers[provider]) {
-    return res.status(400).json({ error: `Unknown provider: ${provider}` });
-  }
-
-  const apiKey = {
-    anthropic: ANTHROPIC_API_KEY,
-    openai: OPENAI_API_KEY,
-    gemini: GEMINI_API_KEY
-  }[provider];
-
-  if (!apiKey) {
-    return res.status(400).json({ error: `Provider ${provider} not configured` });
-  }
+  if (!provider || !original || !rewrite) return res.status(400).json({ error: 'Missing fields' });
+  if (!providers[provider]) return res.status(400).json({ error: `Unknown provider: ${provider}` });
+  const key = { anthropic: ANTHROPIC_API_KEY, openai: OPENAI_API_KEY, gemini: GEMINI_API_KEY }[provider];
+  if (!key) return res.status(400).json({ error: `${provider} not configured` });
 
   try {
-    // Mask sensitive data
-    const masker = new DataMasker(CUSTOM_MASKS_RAW);
-    const maskedOriginal = masker.mask(original);
-    const maskedRewrite = masker.mask(rewrite);
-    const maskedDeliverable = masker.mask(deliverable || '');
-    const maskedNotAsked = masker.mask(notAsked || '');
+    const m = new DataMasker(CUSTOM_MASKS_RAW);
+    const up = USER_PROMPT_TEMPLATE
+      .replace('{ORIGINAL}', m.mask(original))
+      .replace('{REWRITE}', m.mask(rewrite))
+      .replace('{DELIVERABLE}', m.mask(deliverable || '') || '(not specified)')
+      .replace('{NOT_ASKED}', m.mask(notAsked || '') || '(not specified)');
 
-    // Build prompt
-    const userPrompt = USER_PROMPT_TEMPLATE
-      .replace('{ORIGINAL}', maskedOriginal)
-      .replace('{REWRITE}', maskedRewrite)
-      .replace('{DELIVERABLE}', maskedDeliverable || '(not specified)')
-      .replace('{NOT_ASKED}', maskedNotAsked || '(not specified)');
-
-    // Call LLM
-    const rawResponse = await providers[provider](SYSTEM_PROMPT, userPrompt);
-
-    // Parse JSON response
+    const raw = await providers[provider](SYSTEM_PROMPT, up);
     let parsed;
-    try {
-      const cleaned = rawResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-      parsed = JSON.parse(cleaned);
-    } catch {
-      parsed = {
-        verdict: 'error',
-        summary: 'Could not parse LLM response',
-        raw: rawResponse.substring(0, 500)
-      };
-    }
+    try { parsed = JSON.parse(raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()); }
+    catch { parsed = { verdict: 'error', summary: 'Could not parse LLM response' }; }
 
-    // Unmask any sensitive data in the response
-    if (parsed.scope_drift?.items) {
-      parsed.scope_drift.items = parsed.scope_drift.items.map(i => masker.unmask(i));
-    }
-    if (parsed.missing_items?.items) {
-      parsed.missing_items.items = parsed.missing_items.items.map(i => masker.unmask(i));
-    }
-    if (parsed.assumptions?.items) {
-      parsed.assumptions.items = parsed.assumptions.items.map(i => masker.unmask(i));
-    }
-    if (parsed.suggestions) {
-      parsed.suggestions = parsed.suggestions.map(s => masker.unmask(s));
-    }
-    if (parsed.summary) parsed.summary = masker.unmask(parsed.summary);
-    if (parsed.duck_quote) parsed.duck_quote = masker.unmask(parsed.duck_quote);
-    if (parsed.intent_match?.detail) parsed.intent_match.detail = masker.unmask(parsed.intent_match.detail);
+    // Unmask
+    const um = (o, k) => { if (o?.[k]) o[k] = Array.isArray(o[k]) ? o[k].map(i => m.unmask(i)) : m.unmask(o[k]); };
+    um(parsed.scope_drift, 'items'); um(parsed.missing_items, 'items'); um(parsed.assumptions, 'items');
+    um(parsed, 'suggestions'); um(parsed, 'summary'); um(parsed, 'duck_quote'); um(parsed?.intent_match, 'detail');
 
-    // Return — mask report tells user what was hidden
-    res.json({
-      result: parsed,
-      masking: {
-        itemsMasked: masker.map.size,
-        report: masker.getMaskReport()
-      },
-      provider
-    });
-
+    res.json({ result: parsed, masking: { itemsMasked: m.map.size, report: m.getMaskReport() }, provider });
   } catch (err) {
-    console.error(`[verify] Error with ${provider}:`, err.message);
+    console.error(`[verify] ${provider}:`, err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Utility: generate password hash
-app.post('/api/hash-password', (req, res) => {
-  const { password } = req.body;
-  if (!password || password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters' });
-  }
-  res.json({ hash: hashPassword(password) });
-});
-
-// Serve the frontend for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
+// SPA fallback
+app.get('*', (_, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 
 // ============================================================
 // START
 // ============================================================
-if (!PASSWORD_HASH) {
-  console.error('\n⚠️  PASSWORD_HASH not set!');
-  console.error('Generate one by running:');
-  console.error('  curl -X POST http://localhost:3000/api/hash-password -H "Content-Type: application/json" -d \'{"password":"your-password-here"}\'\n');
-  console.error('Then set it in your .env file.\n');
-  console.error('Starting server without auth for initial setup...\n');
+if (!PASSWORD_VERIFIER) {
+  console.warn('\n⚠️  PASSWORD_VERIFIER not set! Run: node hash-password.js\n');
 }
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🦆 Task Duck server running on port ${PORT}`);
-  console.log(`   Providers: ${[
-    ANTHROPIC_API_KEY ? '✓ Anthropic' : '✗ Anthropic',
-    OPENAI_API_KEY ? '✓ OpenAI' : '✗ OpenAI',
-    GEMINI_API_KEY ? '✓ Gemini' : '✗ Gemini'
-  ].join(' | ')}`);
-  console.log(`   Auth: ${PASSWORD_HASH ? '✓ Enabled' : '⚠ Disabled (set PASSWORD_HASH)'}`);
-  console.log(`   Masking: ${CUSTOM_MASKS_RAW ? `✓ ${CUSTOM_MASKS_RAW.split(',').length} custom rules` : '✓ Auto-detection only'}\n`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🦆 Task Duck v3.1.0 — port ${PORT}`);
+  console.log(`   Auth: ${PASSWORD_VERIFIER ? '✓ Challenge-response (Argon2id+nonce)' : '⚠ Open (set PASSWORD_VERIFIER)'}`);
+  console.log(`   Providers: ${[ANTHROPIC_API_KEY ? '✓ Claude' : '✗ Claude', OPENAI_API_KEY ? '✓ OpenAI' : '✗ OpenAI', GEMINI_API_KEY ? '✓ Gemini' : '✗ Gemini'].join(' | ')}`);
+  console.log(`   Masking: ${CUSTOM_MASKS_RAW ? `✓ ${CUSTOM_MASKS_RAW.split(',').length} custom` : '✓ Auto'}\n`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EACCES') console.error(`\n❌ Port ${PORT} denied. Set PORT= in .env\n`);
+  else if (err.code === 'EADDRINUSE') console.error(`\n❌ Port ${PORT} in use. Set PORT= in .env\n`);
+  else console.error(`\n❌`, err.message);
+  process.exit(1);
 });
