@@ -512,8 +512,17 @@ async function verifyUnderstanding() {
   $('verifyBtn').disabled=true;
   try{
     const r=await fetch('/api/verify',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},body:JSON.stringify({provider:selectedProvider,original:raw,rewrite:ask,deliverable:$('deliverableField').value,notAsked:$('notAskedField').value,definitionOfDone:$('dodField').value})});
-    const d=await r.json(); if(!r.ok)throw new Error(d.error);
-    const p=d.result; lastVerdict=p.verdict; verifyAttempts++;
+    const d=await r.json();
+    // Server returns result even on 500 now
+    const p=d.result;
+    if(!p){throw new Error(d.error||'No response from AI provider');}
+    if(p.verdict==='error'){
+      result.innerHTML=`<div class="vr-header"><span class="vr-verdict" style="background:var(--red);color:#fff">ERROR</span></div><div class="vr-summary" style="color:var(--red)">${esc(p.summary||d.error||'Unknown error')}</div>${p.duck_quote?`<div class="vr-duck-quote">🦆 "${esc(p.duck_quote)}"</div>`:''}`;
+      result.className='verify-result visible verdict-major_mismatch';
+      duckSay(d.error||'Verification failed. Try again or switch providers.');
+      return;
+    }
+    lastVerdict=p.verdict; verifyAttempts++;
     let html=`<div class="vr-header"><span class="vr-verdict vr-verdict-${p.verdict}">${p.verdict}</span><span class="vr-confidence">${Math.round((p.confidence||0)*100)}%</span></div>`;
     html+=`<div class="vr-summary">${esc(p.summary||'')}</div>`;
     if(p.scope_drift?.detected)html+=`<div class="vr-section"><div class="vr-section-title">Scope Drift</div><ul class="vr-items">${(p.scope_drift.items||[]).map(i=>'<li>'+esc(i)+'</li>').join('')}</ul></div>`;
@@ -533,7 +542,7 @@ async function verifyUnderstanding() {
       $('driftOverride').classList.add('visible');
       $('verifyBtn').textContent='🦆 Re-verify';
     }
-  }catch(e){duckSay('Verify error: '+e.message);result.innerHTML=`<p style="color:var(--red)">${esc(e.message)}</p>`;result.classList.add('visible');}
+  }catch(e){duckSay('Verify error: '+e.message);result.innerHTML=`<p style="color:var(--red);font-size:.85rem">${esc(e.message)}</p><p style="color:var(--text-muted);font-size:.75rem;margin-top:.4rem">Try again or switch to a different AI provider.</p>`;result.className='verify-result visible verdict-major_mismatch';}
   finally{loading.classList.remove('active');$('verifyBtn').disabled=false;}
 }
 

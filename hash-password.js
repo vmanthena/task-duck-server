@@ -134,7 +134,6 @@ Usage:
   const line = '━'.repeat(70);
   console.log(line);
   console.log('Chain:');
-  console.log(`Cost: ${BCRYPT_COST} rounds`);
   console.log(`  sha256(pw)       = ${sha256Pass.substring(0,20)}...`);
   console.log(`  bcrypt(sha256)   = ${bcryptHash.substring(0,30)}...`);
   console.log(`  sha256(bcrypt)   = ${verifier}`);

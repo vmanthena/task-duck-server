@@ -303,25 +303,75 @@ Compare original against rewrite. Detect drift, missing items, assumptions. Chec
 // ============================================================
 // LLM PROVIDERS
 // ============================================================
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
+
+// Retry helper — backs off on 429/529 (overloaded)
+async function fetchWithRetry(url, opts, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    const r = await fetch(url, opts);
+    if (r.status === 429 || r.status === 529) {
+      const wait = Math.min(2000 * Math.pow(2, i), 15000); // 2s, 4s, 8s
+      console.warn(`[retry] ${r.status} — waiting ${wait}ms (attempt ${i + 1}/${retries})`);
+      await new Promise(res => setTimeout(res, wait));
+      continue;
+    }
+    return r;
+  }
+  // Final attempt
+  return fetch(url, opts);
+}
 
 async function callAnthropic(s, u) {
-  const r = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'}, body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:s,messages:[{role:'user',content:u}]}) });
-  const d = await r.json(); if(d.error) throw new Error(`Anthropic: ${d.error.message}`); return d.content?.[0]?.text||'';
+  const r = await fetchWithRetry('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 2048, system: s, messages: [{ role: 'user', content: u }] })
+  });
+  if (!r.ok) {
+    const text = await r.text();
+    try { const d = JSON.parse(text); throw new Error(`Anthropic (${r.status}): ${d.error?.message || text.substring(0, 200)}`); }
+    catch (e) { if (e.message.startsWith('Anthropic')) throw e; throw new Error(`Anthropic (${r.status}): ${text.substring(0, 200)}`); }
+  }
+  const d = await r.json();
+  return d.content?.[0]?.text || '';
 }
+
 async function callOpenAI(s, u) {
-  const r = await fetch('https://api.openai.com/v1/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${OPENAI_API_KEY}`}, body:JSON.stringify({model:'gpt-4o',max_tokens:1500,response_format:{type:'json_object'},messages:[{role:'system',content:s},{role:'user',content:u}]}) });
-  const d = await r.json(); if(d.error) throw new Error(`OpenAI: ${d.error.message}`); return d.choices?.[0]?.message?.content||'';
+  const r = await fetchWithRetry('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+    body: JSON.stringify({ model: 'gpt-4o', max_tokens: 2048, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: s }, { role: 'user', content: u }] })
+  });
+  if (!r.ok) {
+    const text = await r.text();
+    try { const d = JSON.parse(text); throw new Error(`OpenAI (${r.status}): ${d.error?.message || text.substring(0, 200)}`); }
+    catch (e) { if (e.message.startsWith('OpenAI')) throw e; throw new Error(`OpenAI (${r.status}): ${text.substring(0, 200)}`); }
+  }
+  const d = await r.json();
+  return d.choices?.[0]?.message?.content || '';
 }
+
 async function callGemini(s, u) {
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({system_instruction:{parts:[{text:s}]},contents:[{parts:[{text:u}]}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:1500}}) });
-  const d = await r.json(); if(d.error) throw new Error(`Gemini: ${d.error.message}`); return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite';
+  const r = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: s }] },
+      contents: [{ parts: [{ text: u }] }],
+      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 2048 }
+    })
+  });
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(`Gemini (${r.status}): ${text.substring(0, 300)}`);
+  }
+  const d = await r.json();
+  if (d.error) throw new Error(`Gemini: ${d.error.message}`);
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
-async function callCopilot(s, u) {
-  const r = await fetch('https://api.githubcopilot.com/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${GITHUB_TOKEN}`,'Editor-Version':'task-duck/4.0','Copilot-Integration-Id':'task-duck-verifier'}, body:JSON.stringify({model:'gpt-4o',max_tokens:1500,messages:[{role:'system',content:s},{role:'user',content:u}]}) });
-  const d = await r.json(); if(d.error) throw new Error(`Copilot: ${d.error?.message||JSON.stringify(d.error)}`); return d.choices?.[0]?.message?.content||'';
-}
-const providers = { anthropic:callAnthropic, openai:callOpenAI, gemini:callGemini, copilot:callCopilot };
+
+const providers = { anthropic: callAnthropic, openai: callOpenAI, gemini: callGemini };
 
 // ============================================================
 // ROUTES
@@ -364,20 +414,19 @@ app.post('/api/auth/login', (req, res) => {
 // Providers
 app.get('/api/providers', requireAuth, (_,r) => {
   const a=[];
-  if(ANTHROPIC_API_KEY) a.push({id:'anthropic',name:'Claude (Anthropic)',model:'claude-sonnet-4'});
+  if(ANTHROPIC_API_KEY) a.push({id:'anthropic',name:'Claude (Anthropic)',model:ANTHROPIC_MODEL});
   if(OPENAI_API_KEY) a.push({id:'openai',name:'GPT-4o (OpenAI)',model:'gpt-4o'});
-  if(GEMINI_API_KEY) a.push({id:'gemini',name:'Gemini 2.0 Flash',model:'gemini-2.0-flash'});
-  if(GITHUB_TOKEN) a.push({id:'copilot',name:'GitHub Copilot',model:'copilot'});
+  if(GEMINI_API_KEY) a.push({id:'gemini',name:'Gemini Flash Lite',model:process.env.GEMINI_MODEL||'gemini-2.0-flash-lite'});
   r.json({providers:a});
 });
 
 // Verify
 app.post('/api/verify', requireAuth, async (req, res) => {
   const {provider,original,rewrite,deliverable,notAsked,definitionOfDone} = req.body;
-  if(!provider||!original||!rewrite) return res.status(400).json({error:'Missing fields'});
-  if(!providers[provider]) return res.status(400).json({error:`Unknown: ${provider}`});
-  const key={anthropic:ANTHROPIC_API_KEY,openai:OPENAI_API_KEY,gemini:GEMINI_API_KEY,copilot:GITHUB_TOKEN}[provider];
-  if(!key) return res.status(400).json({error:`${provider} not configured`});
+  if(!provider||!original||!rewrite) return res.status(400).json({error:'Missing fields: need provider, original, and rewrite'});
+  if(!providers[provider]) return res.status(400).json({error:`Unknown provider: ${provider}`});
+  const key={anthropic:ANTHROPIC_API_KEY,openai:OPENAI_API_KEY,gemini:GEMINI_API_KEY}[provider];
+  if(!key) return res.status(400).json({error:`${provider} not configured — add API key to .env`});
   try {
     const m = new DataMasker(CUSTOM_MASKS_RAW);
     const up = USR_TMPL
@@ -386,12 +435,57 @@ app.post('/api/verify', requireAuth, async (req, res) => {
       .replace('{DELIVERABLE}',m.mask(deliverable||'')||'(none)')
       .replace('{DOD}',m.mask(definitionOfDone||'')||'(not specified)')
       .replace('{NOT_ASKED}',m.mask(notAsked||'')||'(none)');
+
     const raw = await providers[provider](SYS_PROMPT, up);
-    let p; try{p=JSON.parse(raw.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim());}catch{p={verdict:'error',summary:'Parse failed'};}
-    const um=(o,k)=>{if(o?.[k])o[k]=Array.isArray(o[k])?o[k].map(i=>m.unmask(i)):m.unmask(o[k]);};
-    um(p.scope_drift,'items');um(p.missing_items,'items');um(p.assumptions,'items');um(p,'suggestions');um(p,'summary');um(p,'duck_quote');um(p?.intent_match,'detail');um(p?.definition_of_done,'suggestion');um(p,'spelling_grammar');
-    res.json({result:p,masking:{itemsMasked:m.map.size,report:m.report()},provider});
-  } catch(e) { console.error(`[verify] ${provider}:`,e.message); res.status(500).json({error:e.message}); }
+
+    if (!raw || !raw.trim()) {
+      throw new Error(`${provider} returned an empty response. Try again.`);
+    }
+
+    // Parse JSON — strip markdown fences and any preamble
+    let p;
+    try {
+      let cleaned = raw.trim();
+      // Remove markdown code fences
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
+      // Find the first { and last } to extract JSON
+      const firstBrace = cleaned.indexOf('{');
+      const lastBrace = cleaned.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+      }
+      p = JSON.parse(cleaned);
+    } catch (parseErr) {
+      console.error(`[verify] JSON parse failed for ${provider}. Raw response:`, raw.substring(0, 500));
+      p = {
+        verdict: 'error',
+        confidence: 0,
+        summary: `${provider} returned a response that couldn't be parsed as JSON. Try a different provider or re-verify.`,
+        duck_quote: "Even ducks have bad days. Try again! 🦆"
+      };
+    }
+
+    // Unmask any sensitive data in response
+    const um = (o, k) => { if (o?.[k]) o[k] = Array.isArray(o[k]) ? o[k].map(i => m.unmask(i)) : m.unmask(o[k]); };
+    um(p.scope_drift, 'items'); um(p.missing_items, 'items'); um(p.assumptions, 'items');
+    um(p, 'suggestions'); um(p, 'summary'); um(p, 'duck_quote');
+    um(p?.intent_match, 'detail'); um(p?.definition_of_done, 'suggestion');
+    if (p?.spelling_grammar?.issues) p.spelling_grammar.issues = p.spelling_grammar.issues.map(i => m.unmask(i));
+
+    res.json({ result: p, masking: { itemsMasked: m.map.size, report: m.report() }, provider });
+  } catch (e) {
+    console.error(`[verify] ${provider}:`, e.message);
+    // Return the actual error message to the UI
+    res.status(500).json({
+      error: e.message,
+      result: {
+        verdict: 'error',
+        confidence: 0,
+        summary: e.message,
+        duck_quote: "Something went wrong. Try again or switch providers. 🦆"
+      }
+    });
+  }
 });
 
 app.get('*', (_,r) => r.sendFile(path.join(__dirname,'..','public','index.html')));
@@ -405,7 +499,7 @@ if (!BCRYPT_SALT) console.warn('⚠️  BCRYPT_SALT not set! Run: node hash-pass
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🦆 Task Duck v4.0.0 — port ${PORT}`);
   console.log(`   Auth: ${PASSWORD_VERIFIER ? '✓ bcrypt challenge-response' : '⚠ Open'}`);
-  console.log(`   Providers: ${[ANTHROPIC_API_KEY?'✓ Claude':'✗ Claude',OPENAI_API_KEY?'✓ OpenAI':'✗ OpenAI',GEMINI_API_KEY?'✓ Gemini':'✗ Gemini',GITHUB_TOKEN?'✓ Copilot':'✗ Copilot'].join(' | ')}`);
+  console.log(`   Providers: ${[ANTHROPIC_API_KEY?'✓ Claude ('+ANTHROPIC_MODEL+')':'✗ Claude',OPENAI_API_KEY?'✓ OpenAI':'✗ OpenAI',GEMINI_API_KEY?'✓ Gemini':'✗ Gemini'].join(' | ')}`);
   console.log(`   Masking: ${CUSTOM_MASKS_RAW ? `✓ ${CUSTOM_MASKS_RAW.split(',').length} custom` : '✓ Auto'}\n`);
 });
 
