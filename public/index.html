@@ -337,15 +337,11 @@ const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
 function playQuack() {
-  if (!soundEnabled) return; initAudio();
-  try {
-    const n = audioCtx.currentTime;
-    const o1 = audioCtx.createOscillator(), g1 = audioCtx.createGain();
-    o1.type='sawtooth'; o1.frequency.setValueAtTime(800,n); o1.frequency.exponentialRampToValueAtTime(280,n+.12);
-    g1.gain.setValueAtTime(.3,n); g1.gain.exponentialRampToValueAtTime(.01,n+.15);
-    o1.connect(g1).connect(audioCtx.destination); o1.start(n); o1.stop(n+.15);
-    setTimeout(()=>{const t=audioCtx.currentTime,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sawtooth';o.frequency.setValueAtTime(750,t);o.frequency.exponentialRampToValueAtTime(250,t+.1);g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.01,t+.12);o.connect(g).connect(audioCtx.destination);o.start(t);o.stop(t+.12)},180);
-  } catch(e){}
+  if (!soundEnabled) return;
+  // Play quack.mp3 from assets
+  const audio = new Audio('assets/quack.mp3');
+  audio.volume = 1.0;
+  audio.play();
 }
 function toggleSound() { soundEnabled=!soundEnabled; localStorage.setItem('tdSound',soundEnabled); updateSoundUI(); if(soundEnabled){initAudio();if(audioCtx.state==='suspended')audioCtx.resume();playQuack();} }
 function updateSoundUI() { $('soundIcon').textContent=soundEnabled?'🔊':'🔇'; $('soundLabel').textContent=soundEnabled?'SOUND ON':'SOUND OFF'; }
