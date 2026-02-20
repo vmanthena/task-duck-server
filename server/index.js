@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -320,11 +321,12 @@ async function fetchWithRetry(url, opts, retries = 3) {
   return fetch(url, opts);
 }
 
-async function callAnthropic(s, u) {
+async function callAnthropic(s, u, modelOverride) {
+  const useModel = modelOverride || ANTHROPIC_MODEL;
   const r = await fetchWithRetry('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 2048, system: s, messages: [{ role: 'user', content: u }] })
+    body: JSON.stringify({ model: useModel, max_tokens: 2048, system: s, messages: [{ role: 'user', content: u }] })
   });
   if (!r.ok) {
     const text = await r.text();
@@ -335,7 +337,7 @@ async function callAnthropic(s, u) {
   return d.content?.[0]?.text || '';
 }
 
-async function callOpenAI(s, u) {
+async function callOpenAI(s, u, _model) {
   const r = await fetchWithRetry('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
@@ -350,7 +352,7 @@ async function callOpenAI(s, u) {
   return d.choices?.[0]?.message?.content || '';
 }
 
-async function callGemini(s, u) {
+async function callGemini(s, u, _model) {
   const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite';
   const r = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`, {
     method: 'POST',
@@ -410,18 +412,21 @@ app.post('/api/auth/login', (req, res) => {
   res.json({ token:createToken(), expiresIn:SESSION_HOURS*3600 });
 });
 
-// Providers
+// Providers — ordered cheapest first
 app.get('/api/providers', requireAuth, (_,r) => {
   const a=[];
-  if(ANTHROPIC_API_KEY) a.push({id:'anthropic',name:'Claude (Anthropic)',model:ANTHROPIC_MODEL});
-  if(OPENAI_API_KEY) a.push({id:'openai',name:'GPT-4o (OpenAI)',model:'gpt-4o'});
-  if(GEMINI_API_KEY) a.push({id:'gemini',name:'Gemini Flash Lite',model:process.env.GEMINI_MODEL||'gemini-2.0-flash-lite'});
+  if(GEMINI_API_KEY) a.push({id:'gemini',name:'Gemini Flash Lite',model:process.env.GEMINI_MODEL||'gemini-2.0-flash-lite',cost:'free'});
+  if(OPENAI_API_KEY) a.push({id:'openai',name:'GPT-4o (OpenAI)',model:'gpt-4o',cost:'low'});
+  if(ANTHROPIC_API_KEY) {
+    a.push({id:'anthropic',name:'Claude Haiku',model:'claude-haiku-4-5-20251001',cost:'low'});
+    a.push({id:'anthropic',name:'Claude Sonnet',model:'claude-sonnet-4-20250514',cost:'medium'});
+  }
   r.json({providers:a});
 });
 
-// Verify
+// Verify — accepts optional model override
 app.post('/api/verify', requireAuth, async (req, res) => {
-  const {provider,original,rewrite,deliverable,notAsked,definitionOfDone} = req.body;
+  const {provider,original,rewrite,deliverable,notAsked,definitionOfDone,model} = req.body;
   if(!provider||!original||!rewrite) return res.status(400).json({error:'Missing fields: need provider, original, and rewrite'});
   if(!providers[provider]) return res.status(400).json({error:`Unknown provider: ${provider}`});
   const key={anthropic:ANTHROPIC_API_KEY,openai:OPENAI_API_KEY,gemini:GEMINI_API_KEY}[provider];
@@ -435,7 +440,7 @@ app.post('/api/verify', requireAuth, async (req, res) => {
       .replace('{DOD}',m.mask(definitionOfDone||'')||'(not specified)')
       .replace('{NOT_ASKED}',m.mask(notAsked||'')||'(none)');
 
-    const raw = await providers[provider](SYS_PROMPT, up);
+    const raw = await providers[provider](SYS_PROMPT, up, model);
 
     if (!raw || !raw.trim()) {
       throw new Error(`${provider} returned an empty response. Try again.`);
