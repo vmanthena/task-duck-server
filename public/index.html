@@ -1130,13 +1130,13 @@ if (clientLockoutUntil > Date.now()) { updateLockoutUI(); }
 let authToken = localStorage.getItem('taskDuckToken') || '';
 let selectedProvider = localStorage.getItem('taskDuckProvider') || '';
 let availableProviders = [];
-let argon2Loaded = false;
+let bcryptLoaded = false;
 
-// Load argon2-browser WASM
-const argon2Script = document.createElement('script');
-argon2Script.src = 'https://cdn.jsdelivr.net/npm/argon2-browser@1.18.0/dist/argon2-bundled.min.js';
-argon2Script.onload = () => { argon2Loaded = true; };
-document.head.appendChild(argon2Script);
+// Load bcryptjs (pure JS, no WASM, works everywhere)
+const bcryptScript = document.createElement('script');
+bcryptScript.src = 'https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js';
+bcryptScript.onload = () => { bcryptLoaded = true; };
+document.head.appendChild(bcryptScript);
 
 // SHA-256 helper using SubtleCrypto
 async function sha256Hex(input) {
@@ -1145,23 +1145,25 @@ async function sha256Hex(input) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Uint8Array to hex
-function bufToHex(buf) {
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 /**
- * Challenge-response login:
- *  1. GET /api/auth/challenge → { nonce, timestamp, argon2Params }
- *  2. Compute in browser:
- *     step1 = sha256(password)
- *     step2 = argon2id(step1, salt, params) → hex
- *     verifier = sha256(step2)
- *     proof = sha256(verifier + nonce + timestamp)
+ * Challenge-response login (bcrypt edition):
+ *
+ *  1. GET /api/auth/challenge → { nonce, timestamp, bcryptSalt }
+ *     Server sends a fixed bcrypt salt (stored in env, generated once by CLI)
+ *
+ *  2. Client computes (pure JS, no WASM):
+ *     step1 = sha256(password)                              (hex)
+ *     step2 = bcrypt(step1, bcryptSalt)                     (60-char bcrypt string)
+ *     verifier = sha256(step2)                              (hex)
+ *     proof = sha256(verifier + nonce + timestamp)           (hex, one-time)
+ *
  *  3. POST /api/auth/login { proof, timestamp }
  *
- * Password, sha256(password), and argon2 output NEVER leave the browser.
- * Only the one-time proof hash goes over the wire.
+ *  Server stores PASSWORD_VERIFIER = sha256(bcrypt(sha256(password), salt))
+ *  Server computes expected = sha256(PASSWORD_VERIFIER + nonce + timestamp)
+ *  Compares proof === expected
+ *
+ * Nothing leaves the browser except the one-time proof hash.
  */
 async function doLogin() {
   const pw = document.getElementById('loginPassword').value;
@@ -1174,17 +1176,16 @@ async function doLogin() {
   if (!pw) { errEl.textContent = 'Enter a password'; return; }
   if (pw.length < 8) { errEl.textContent = 'Password must be at least 8 characters'; return; }
 
-  // Check client-side lockout
   if (clientLockoutUntil > Date.now()) { updateLockoutUI(); return; }
 
-  if (!argon2Loaded) {
-    errEl.textContent = 'Loading crypto engine...';
-    await new Promise(r => { const iv = setInterval(() => { if (argon2Loaded) { clearInterval(iv); r(); } }, 100); });
+  if (!bcryptLoaded) {
+    errEl.textContent = 'Loading crypto...';
+    await new Promise(r => { const iv = setInterval(() => { if (bcryptLoaded) { clearInterval(iv); r(); } }, 100); });
     errEl.textContent = '';
   }
 
   btn.disabled = true;
-  btn.textContent = '⏳ Computing hash...';
+  btn.textContent = '⏳ Hashing...';
 
   try {
     // 1. Get challenge
@@ -1194,25 +1195,15 @@ async function doLogin() {
       startLockoutCountdown(data.lockedFor);
       return;
     }
-    const { nonce, timestamp, argon2Params } = await challengeRes.json();
+    const { nonce, timestamp, bcryptSalt } = await challengeRes.json();
 
-    // 2. Compute hash chain
+    // 2. Compute hash chain (pure JS, ~1-2s for 12 rounds)
     const sha256Pass = await sha256Hex(pw);
-    const saltBytes = new TextEncoder().encode(argon2Params.salt);
-    const passBytes = new TextEncoder().encode(sha256Pass);
 
-    const argon2Result = await argon2.hash({
-      pass: passBytes,
-      salt: saltBytes,
-      time: argon2Params.timeCost,
-      mem: argon2Params.memoryCost,
-      hashLen: argon2Params.hashLength,
-      parallelism: argon2Params.parallelism,
-      type: 2,
-    });
+    // bcrypt.hashSync works in the browser — pure JS, no WASM
+    const bcryptHash = dcodeIO.bcrypt.hashSync(sha256Pass, bcryptSalt);
 
-    const argon2Hex = bufToHex(argon2Result.hash);
-    const verifier = await sha256Hex(argon2Hex);
+    const verifier = await sha256Hex(bcryptHash);
     const proof = await sha256Hex(verifier + nonce + timestamp);
 
     // 3. Send proof

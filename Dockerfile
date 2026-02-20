@@ -1,15 +1,9 @@
 FROM node:22-alpine
 
-# argon2 needs build tools for native compilation
-RUN apk add --no-cache python3 make g++
-
 WORKDIR /app
 
 COPY package.json ./
 RUN npm install --production && npm cache clean --force
-
-# Remove build tools after argon2 is compiled
-RUN apk del python3 make g++
 
 COPY server/ ./server/
 COPY public/ ./public/
