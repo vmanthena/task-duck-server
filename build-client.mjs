@@ -20,6 +20,8 @@ const cssBuildOptions = {
   bundle: true,
   outfile: 'dist/public/main.css',
   minify: !isWatch,
+  loader: { '.woff2': 'file' },
+  assetNames: 'assets/fonts/[name]',
 };
 
 function copyAssets() {

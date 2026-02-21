@@ -1,11 +1,12 @@
 import { $ } from './utils.js';
 import { state } from './state.js';
+import { ICON } from './icons.js';
 
 export function startWorkTimer(): void {
   state.workTimerSeconds = 0;
   state.workTimerPaused = false;
   $('workTimer').classList.add('active');
-  $('workTimerBtn').textContent = '⏸';
+  $('workTimerBtn').innerHTML = ICON.pause;
   state.workTimerInterval = setInterval(() => {
     if (!state.workTimerPaused) {
       state.workTimerSeconds++;
@@ -22,12 +23,12 @@ function updateTimerDisplay(): void {
 
 export function toggleWorkTimer(): void {
   state.workTimerPaused = !state.workTimerPaused;
-  $('workTimerBtn').textContent = state.workTimerPaused ? '▶' : '⏸';
+  $('workTimerBtn').innerHTML = state.workTimerPaused ? ICON.play : ICON.pause;
 }
 
 export function pauseWorkTimer(): void {
   state.workTimerPaused = true;
-  $('workTimerBtn').textContent = '▶';
+  $('workTimerBtn').innerHTML = ICON.play;
 }
 
 export function stopWorkTimer(): void {

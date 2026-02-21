@@ -3,6 +3,10 @@ import { state } from './state.js';
 import { duckSay } from './duck.js';
 import { playQuack } from './sound.js';
 import { scheduleSave } from './draft.js';
+import { ICON, ICON_SM } from './icons.js';
+
+const VERIFY_BTN_HTML = `${ICON.checkCircle} Verify`;
+const REVERIFY_BTN_HTML = `${ICON.checkCircle} Re-verify`;
 
 export async function verifyUnderstanding(): Promise<void> {
   if (!state.selectedProvider || !state.authToken) return;
@@ -48,16 +52,16 @@ export async function verifyUnderstanding(): Promise<void> {
     if (p.story_points) {
       const sp = p.story_points;
       const badge = sp.bloated
-        ? `<span class="vr-sp-badge vr-sp-bloated">BLOATED</span>`
-        : `<span class="vr-sp-badge vr-sp-ok">OK</span>`;
+        ? `<span class="vr-sp-badge vr-sp-bloated">${ICON_SM.alertTriangle} BLOATED</span>`
+        : `<span class="vr-sp-badge vr-sp-ok">${ICON_SM.check} OK</span>`;
       html += `<div class="vr-story-points"><div class="vr-section-title">Story Points</div>`;
       html += `<div class="vr-sp-assessment">${badge} ${esc(sp.assessment || '')}</div>`;
       if (sp.suggested != null) html += `<div style="font-family:var(--mono);font-size:.75rem;color:var(--text-dim)">Suggested: ${sp.suggested} SP${sp.provided != null ? ` (provided: ${sp.provided})` : ''}</div>`;
-      if (sp.split_recommended) html += `<div class="vr-sp-split">Consider splitting this story — 8+ SP is too large for a single sprint</div>`;
+      if (sp.split_recommended) html += `<div class="vr-sp-split">${ICON_SM.scissors} Consider splitting this story — 8+ SP is too large for a single sprint</div>`;
       html += `</div>`;
     }
     if (p.duck_quote) html += `<div class="vr-duck-quote">🦆 "${esc(p.duck_quote)}"</div>`;
-    if (d.masking?.itemsMasked) html += `<div class="vr-masking">🔒 ${d.masking.itemsMasked} sensitive item(s) masked before sending to ${d.provider}</div>`;
+    if (d.masking?.itemsMasked) html += `<div class="vr-masking">${ICON.lock} ${d.masking.itemsMasked} sensitive item(s) masked before sending to ${d.provider}</div>`;
     result.innerHTML = html; result.className = `verify-result visible verdict-${p.verdict}`;
     if (p.verdict === 'match') {
       duckSay("Clean match! Lock it in.");
@@ -68,7 +72,7 @@ export async function verifyUnderstanding(): Promise<void> {
       if (state.verifyAttempts >= 2) duckSay("Two misses. Re-read the original from scratch.");
       else duckSay("Drift detected. Fix your rewrite or let me re-scope it.");
       $('driftOverride').classList.add('visible');
-      $('verifyBtn').textContent = '🦆 Re-verify';
+      $('verifyBtn').innerHTML = REVERIFY_BTN_HTML;
     }
   } catch (e) {
     duckSay('Verify error: ' + (e as Error).message);
@@ -133,7 +137,7 @@ export async function requestRescope(): Promise<void> {
         spHtml = `<span>${suggested} SP</span>`;
       }
       if (p.split_recommended || suggested >= 8) {
-        spHtml += ` <span class="rescope-sp-split">Split recommended</span>`;
+        spHtml += ` <span class="rescope-sp-split">${ICON_SM.scissors} Split recommended</span>`;
       }
       display.innerHTML = spHtml;
       pointsField.style.display = '';

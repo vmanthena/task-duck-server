@@ -8,6 +8,7 @@ import { stopWorkTimer } from './timer.js';
 import { stopCheckpoints } from './checkpoint.js';
 import { activateStep } from './steps.js';
 import { removeDraft } from './draft.js';
+import { ICON } from './icons.js';
 
 interface HistoryItem {
   id: number;
@@ -160,7 +161,7 @@ function renderTrend(done: HistoryItem[]): void {
   const totalExtras = recent.reduce((a, b) => a + (b.extras || 0), 0);
   const maxScore = Math.max(...recent.map(x => x.score), 1);
   const bars = recent.slice().reverse().map(x => `<div class="bar" style="height:${Math.max(4, (x.score / maxScore) * 40)}px;background:${x.score >= 80 ? 'var(--green)' : x.score >= 50 ? 'var(--orange)' : 'var(--red)'}"></div>`).join('');
-  el.innerHTML = `<div class="trend-section"><h4>📈 Trends (last ${recent.length} tasks)</h4><div class="trend-row"><div class="trend-stat"><div class="ts-num" style="color:${avgScore >= 80 ? 'var(--green)' : avgScore >= 50 ? 'var(--orange)' : 'var(--red)'}">${avgScore}%</div><div class="ts-lbl">Avg accuracy</div></div><div class="trend-stat"><div class="ts-num" style="color:var(--orange)">${avgTime}m</div><div class="ts-lbl">Avg time</div></div><div class="trend-stat"><div class="ts-num" style="color:var(--purple)">${totalExtras}</div><div class="ts-lbl">Total extras</div></div></div><div class="trend-sparkline">${bars}</div></div>`;
+  el.innerHTML = `<div class="trend-section"><h4>${ICON.trendingUp} Trends (last ${recent.length} tasks)</h4><div class="trend-row"><div class="trend-stat"><div class="ts-num" style="color:${avgScore >= 80 ? 'var(--green)' : avgScore >= 50 ? 'var(--orange)' : 'var(--red)'}">${avgScore}%</div><div class="ts-lbl">Avg accuracy</div></div><div class="trend-stat"><div class="ts-num" style="color:var(--orange)">${avgTime}m</div><div class="ts-lbl">Avg time</div></div><div class="trend-stat"><div class="ts-num" style="color:var(--purple)">${totalExtras}</div><div class="ts-lbl">Total extras</div></div></div><div class="trend-sparkline">${bars}</div></div>`;
 }
 
 export function toggleHistory(): void {
@@ -181,7 +182,7 @@ export function resetAll(silent?: boolean): void {
   $('rescopeSection').classList.remove('visible');
   $('completionSection').classList.remove('visible');
   document.querySelectorAll('.step,.step-connector').forEach(el => (el as HTMLElement).style.display = '');
-  $('verifyBtn').textContent = '🦆 Verify';
+  $('verifyBtn').innerHTML = `${ICON.checkCircle} Verify`;
   activateStep(1); stopWorkTimer(); stopCheckpoints();
   if (!silent) { removeDraft(); duckSay("Fresh start! Paste a new task below."); }
 }

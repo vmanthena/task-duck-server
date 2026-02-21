@@ -1,5 +1,6 @@
 import { $ } from './utils.js';
 import { state } from './state.js';
+import { ICON } from './icons.js';
 
 const QUACK_DATA = './assets/duck-quack.m4a';
 
@@ -20,6 +21,6 @@ export function toggleSound(): void {
 }
 
 export function updateSoundUI(): void {
-  $('soundIcon').textContent = state.soundEnabled ? '🔊' : '🔇';
+  $('soundIcon').innerHTML = state.soundEnabled ? ICON.volume2 : ICON.volumeX;
   $('soundLabel').textContent = state.soundEnabled ? 'SOUND ON' : 'SOUND OFF';
 }

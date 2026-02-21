@@ -1,7 +1,7 @@
 .verify-result {
-  margin-top: 0.85rem;
-  padding: 0.85rem;
-  border-radius: 12px;
+  margin-top: 0.65rem;
+  padding: 0.75rem;
+  border-radius: 10px;
   border: 1px solid var(--border);
   display: none;
 }
@@ -34,7 +34,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .vr-verdict {
@@ -43,8 +43,15 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 0.15rem 0.5rem;
+  padding: 0.12rem 0.45rem;
   border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.vr-verdict svg {
+  flex-shrink: 0;
 }
 
 .vr-verdict-match {
@@ -76,11 +83,11 @@
 .vr-summary {
   font-size: 0.88rem;
   line-height: 1.5;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .vr-section {
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.35rem;
 }
 
 .vr-section-title {
@@ -88,7 +95,7 @@
   font-size: 0.65rem;
   text-transform: uppercase;
   color: var(--text-dim);
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 
 .vr-items {
@@ -97,15 +104,15 @@
 }
 
 .vr-items li {
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.12rem;
 }
 
 .vr-duck-quote {
   font-style: italic;
   font-size: 0.82rem;
   color: var(--yellow);
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
   border-top: 1px solid var(--border);
 }
 
@@ -113,7 +120,10 @@
   font-family: var(--mono);
   font-size: 0.6rem;
   color: var(--text-muted);
-  margin-top: 0.4rem;
+  margin-top: 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .verify-loading {
@@ -140,11 +150,11 @@
 }
 
 .drift-override {
-  margin-top: 0.65rem;
-  padding: 0.65rem;
+  margin-top: 0.5rem;
+  padding: 0.55rem;
   background: var(--orange-dim);
   border: 1px solid var(--orange);
-  border-radius: 10px;
+  border-radius: 8px;
   display: none;
 }
 
@@ -172,11 +182,11 @@
 
 .rescope-section {
   display: none;
-  margin-top: 0.65rem;
-  padding: 0.85rem;
+  margin-top: 0.5rem;
+  padding: 0.7rem;
   background: var(--blue-dim);
   border: 1px solid var(--blue);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .rescope-section.visible {
@@ -187,7 +197,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   font-family: var(--mono);
   font-size: 0.75rem;
   font-weight: 600;
@@ -200,16 +210,18 @@
   color: var(--text-muted);
   cursor: pointer;
   font-size: 0.85rem;
+  display: flex;
+  align-items: center;
 }
 
 .rescope-changes {
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.5rem;
   font-size: 0.78rem;
   line-height: 1.5;
 }
 
 .rescope-changes li {
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
   color: var(--text-dim);
   list-style: none;
   padding-left: 0.8rem;
@@ -217,14 +229,14 @@
 }
 
 .rescope-changes li::before {
-  content: '→';
+  content: '\2192';
   position: absolute;
   left: 0;
   color: var(--blue);
 }
 
 .rescope-field {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .rescope-field label {
@@ -234,7 +246,7 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--blue);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
 }
 
 .rescope-field textarea {
@@ -242,34 +254,34 @@
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 0.6rem 0.8rem;
+  padding: 0.5rem 0.7rem;
   color: var(--text);
   font-family: var(--sans);
   font-size: 0.85rem;
   line-height: 1.5;
   resize: vertical;
   outline: none;
-  min-height: 60px;
+  min-height: 55px;
 }
 
 .rescope-readonly {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 0.6rem 0.8rem;
+  padding: 0.5rem 0.7rem;
   color: var(--text);
   font-family: var(--sans);
   font-size: 0.85rem;
   line-height: 1.5;
   white-space: pre-wrap;
   user-select: text;
-  min-height: 40px;
-  max-height: 200px;
+  min-height: 36px;
+  max-height: 180px;
   overflow-y: auto;
 }
 
 .rescope-copy {
-  margin-top: 0.25rem;
+  margin-top: 0.2rem;
   border-color: var(--blue) !important;
   color: var(--blue) !important;
 }
@@ -282,7 +294,7 @@
   font-family: var(--mono);
   font-size: 0.95rem;
   font-weight: 600;
-  padding: 0.3rem 0;
+  padding: 0.25rem 0;
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -337,43 +349,49 @@
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--red);
-  margin-top: 0.25rem;
-  padding: 0.25rem 0.5rem;
+  margin-top: 0.2rem;
+  padding: 0.2rem 0.45rem;
   background: var(--red-dim, rgba(255, 60, 60, 0.1));
   border-radius: 6px;
   border-left: 3px solid var(--red);
 }
 
 .rescope-points-field {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .vr-story-points {
-  margin-bottom: 0.4rem;
-  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.35rem;
+  padding: 0.35rem 0.55rem;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
 }
 
 .vr-story-points .vr-section-title {
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.25rem;
 }
 
 .vr-sp-assessment {
   font-size: 0.82rem;
   line-height: 1.4;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 
 .vr-sp-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   font-family: var(--mono);
   font-size: 0.68rem;
   font-weight: 600;
-  padding: 0.1rem 0.4rem;
+  padding: 0.08rem 0.35rem;
   border-radius: 4px;
-  margin-right: 0.3rem;
+  margin-right: 0.25rem;
+}
+
+.vr-sp-badge svg {
+  flex-shrink: 0;
 }
 
 .vr-sp-bloated {
@@ -386,58 +404,11 @@
   color: var(--bg);
 }
 
-.field-row-3 {
-  grid-template-columns: 1fr 2fr 90px;
-}
-
-.drift-rescope-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 0.6rem;
-}
-
-.drift-rescope-group .field {
-  margin: 0;
-}
-
-.drift-action-btn {
-  align-self: flex-start;
-}
-
-.drift-divider {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.6rem;
-}
-
-.drift-divider::before,
-.drift-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.drift-divider span {
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.drift-proceed-group {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
 .rescope-duck {
   font-style: italic;
   font-size: 0.8rem;
   color: var(--blue);
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
   border-top: 1px solid var(--border);
 }
