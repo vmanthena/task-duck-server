@@ -22,7 +22,9 @@ function saveDraft(): void {
     peerWho: ($('peerWho') as HTMLTextAreaElement).value,
     peerSurprise: ($('peerSurprise') as HTMLTextAreaElement).value,
     parkingLot: ($('parkingLot') as HTMLTextAreaElement).value,
+    storyPoints: ($('storyPointsField') as HTMLInputElement).value,
     driftReason: ($('driftReason') as HTMLInputElement).value,
+    rescopeJustification: ($('rescopeJustification') as HTMLTextAreaElement).value,
     scope: getScopeItems(),
     currentStep: state.currentStep,
     lastVerdict: state.lastVerdict,
@@ -51,7 +53,9 @@ export function loadDraft(): boolean {
     ($('peerWho') as HTMLTextAreaElement).value = d.peerWho || '';
     ($('peerSurprise') as HTMLTextAreaElement).value = d.peerSurprise || '';
     ($('parkingLot') as HTMLTextAreaElement).value = d.parkingLot || '';
+    ($('storyPointsField') as HTMLInputElement).value = d.storyPoints || '';
     ($('driftReason') as HTMLInputElement).value = d.driftReason || '';
+    ($('rescopeJustification') as HTMLTextAreaElement).value = d.rescopeJustification || '';
     state.lastVerdict = d.lastVerdict || null;
     if (d.scope?.length) {
       $('scopeList').innerHTML = '';

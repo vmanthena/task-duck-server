@@ -8,6 +8,7 @@ export interface VerifyResult {
   definition_of_done?: { clear: boolean; suggestion: string };
   spelling_grammar?: { issues: string[] };
   suggestions?: string[];
+  story_points?: { provided: number | null; assessment: string; suggested: number | null; bloated: boolean; split_recommended: boolean };
   duck_quote?: string;
   intent_match?: { detail: string };
 }
@@ -16,6 +17,7 @@ export interface RescopeResult {
   corrected_rewrite: string;
   corrected_dod: string;
   changes_made: string[];
+  suggested_story_points?: number | null;
   duck_quote?: string;
 }
 

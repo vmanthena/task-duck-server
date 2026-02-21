@@ -12,6 +12,8 @@ export async function verifyUnderstanding(): Promise<void> {
   const loading = $('verifyLoading'), result = $('verifyResult');
   loading.classList.add('active'); result.classList.remove('visible'); result.className = 'verify-result';
   ($('verifyBtn') as HTMLButtonElement).disabled = true;
+  const spVal = parseInt(($('storyPointsField') as HTMLInputElement).value);
+  const storyPoints = isNaN(spVal) ? null : spVal;
   try {
     const r = await fetch('/api/verify', {
       method: 'POST',
@@ -21,7 +23,8 @@ export async function verifyUnderstanding(): Promise<void> {
         original: raw, rewrite: ask,
         deliverable: ($('deliverableField') as HTMLTextAreaElement).value,
         notAsked: ($('notAskedField') as HTMLTextAreaElement).value,
-        definitionOfDone: ($('dodField') as HTMLTextAreaElement).value
+        definitionOfDone: ($('dodField') as HTMLTextAreaElement).value,
+        storyPoints
       })
     });
     const d = await r.json();
@@ -42,6 +45,17 @@ export async function verifyUnderstanding(): Promise<void> {
     if (p.definition_of_done && !p.definition_of_done.clear) html += `<div class="vr-section"><div class="vr-section-title">Definition of Done</div><p style="font-size:.82rem">${esc(p.definition_of_done.suggestion || 'Make it specific and testable')}</p></div>`;
     if (p.spelling_grammar?.issues?.length) html += `<div class="vr-section"><div class="vr-section-title">Spelling/Grammar</div><ul class="vr-items">${p.spelling_grammar.issues.slice(0, 4).map((i: string) => '<li>' + esc(i) + '</li>').join('')}</ul></div>`;
     if (p.suggestions?.length) html += `<div class="vr-section"><div class="vr-section-title">Suggestions</div><ul class="vr-items">${p.suggestions.slice(0, 4).map((i: string) => '<li>' + esc(i) + '</li>').join('')}</ul></div>`;
+    if (p.story_points) {
+      const sp = p.story_points;
+      const badge = sp.bloated
+        ? `<span class="vr-sp-badge vr-sp-bloated">BLOATED</span>`
+        : `<span class="vr-sp-badge vr-sp-ok">OK</span>`;
+      html += `<div class="vr-story-points"><div class="vr-section-title">Story Points</div>`;
+      html += `<div class="vr-sp-assessment">${badge} ${esc(sp.assessment || '')}</div>`;
+      if (sp.suggested != null) html += `<div style="font-family:var(--mono);font-size:.75rem;color:var(--text-dim)">Suggested: ${sp.suggested} SP${sp.provided != null ? ` (provided: ${sp.provided})` : ''}</div>`;
+      if (sp.split_recommended) html += `<div class="vr-sp-split">Consider splitting this story — 8+ SP is too large for a single sprint</div>`;
+      html += `</div>`;
+    }
     if (p.duck_quote) html += `<div class="vr-duck-quote">🦆 "${esc(p.duck_quote)}"</div>`;
     if (d.masking?.itemsMasked) html += `<div class="vr-masking">🔒 ${d.masking.itemsMasked} sensitive item(s) masked before sending to ${d.provider}</div>`;
     result.innerHTML = html; result.className = `verify-result visible verdict-${p.verdict}`;
@@ -68,13 +82,24 @@ export async function verifyUnderstanding(): Promise<void> {
 
 export async function requestRescope(): Promise<void> {
   if (!state.selectedProvider || !state.authToken) return;
+  const justification = ($('rescopeJustification') as HTMLTextAreaElement).value.trim();
+  if (!justification) {
+    const el = $('rescopeJustification') as HTMLTextAreaElement;
+    el.style.borderColor = 'var(--red)';
+    setTimeout(() => { el.style.borderColor = ''; }, 2000);
+    duckSay("Explain WHY the scope needs to change before I re-evaluate it.");
+    playQuack();
+    return;
+  }
   const raw = ($('rawTaskField') as HTMLTextAreaElement).value.trim();
   const ask = ($('askField') as HTMLTextAreaElement).value.trim();
-  if (!raw || !ask) { duckSay("Need both original and your rewrite to suggest a re-scope."); return; }
+  if (!raw || !ask) { duckSay("Need both original and your rewrite to re-evaluate scope."); return; }
   const loading = $('rescopeLoading'), section = $('rescopeSection');
   loading.classList.add('active'); section.classList.remove('visible');
   const vrEl = $('verifyResult');
   const driftSummary = vrEl ? vrEl.textContent!.substring(0, 500) : 'Drift detected';
+  const spVal = parseInt(($('storyPointsField') as HTMLInputElement).value);
+  const storyPoints = isNaN(spVal) ? null : spVal;
   try {
     const r = await fetch('/api/rescope', {
       method: 'POST',
@@ -82,19 +107,41 @@ export async function requestRescope(): Promise<void> {
       body: JSON.stringify({
         provider: state.selectedProvider, model: state.selectedModel,
         original: raw, rewrite: ask,
-        dod: ($('dodField') as HTMLTextAreaElement).value, driftSummary
+        dod: ($('dodField') as HTMLTextAreaElement).value, driftSummary,
+        justification, storyPoints
       })
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Re-scope failed');
     const p = d.result;
     if (!p) throw new Error('No suggestion returned');
-    ($('rescopeRewrite') as HTMLTextAreaElement).value = p.corrected_rewrite || '';
-    ($('rescopeDod') as HTMLTextAreaElement).value = p.corrected_dod || '';
+    $('rescopeRewriteDisplay').textContent = p.corrected_rewrite || '';
+    $('rescopeDodDisplay').textContent = p.corrected_dod || '';
     $('rescopeChanges').innerHTML = (p.changes_made || []).map((c: string) => `<li>${esc(c)}</li>`).join('');
     $('rescopeDuck').textContent = p.duck_quote ? `🦆 "${p.duck_quote}"` : '';
+    const pointsField = $('rescopePointsField');
+    if (p.suggested_story_points != null) {
+      const suggested = p.suggested_story_points;
+      const display = $('rescopePointsDisplay');
+      let spHtml = '';
+      if (storyPoints != null) {
+        const diff = suggested - storyPoints;
+        const arrow = diff < 0 ? '\u2193' : diff > 0 ? '\u2191' : '=';
+        const cls = diff < 0 ? 'rescope-sp-lower' : diff > 0 ? 'rescope-sp-higher' : 'rescope-sp-same';
+        spHtml = `<span class="rescope-sp-original">${storyPoints} SP</span> <span class="rescope-sp-arrow ${cls}">${arrow}</span> <span class="rescope-sp-suggested ${cls}">${suggested} SP</span> <span class="rescope-sp-diff ${cls}">(${diff > 0 ? '+' : ''}${diff})</span>`;
+      } else {
+        spHtml = `<span>${suggested} SP</span>`;
+      }
+      if (p.split_recommended || suggested >= 8) {
+        spHtml += ` <span class="rescope-sp-split">Split recommended</span>`;
+      }
+      display.innerHTML = spHtml;
+      pointsField.style.display = '';
+    } else {
+      pointsField.style.display = 'none';
+    }
     section.classList.add('visible');
-    duckSay("Here's my suggestion. Review it — don't blindly accept!");
+    duckSay("Here's my re-evaluation. Review it and copy what you need.");
   } catch (e) {
     duckSay('Re-scope error: ' + (e as Error).message);
   } finally {
@@ -102,15 +149,16 @@ export async function requestRescope(): Promise<void> {
   }
 }
 
-export function applyRescope(field: string): void {
-  if (field === 'rewrite') {
-    ($('askField') as HTMLTextAreaElement).value = ($('rescopeRewrite') as HTMLTextAreaElement).value;
-    duckSay("Rewrite updated. Re-verify to confirm it matches now.");
-  } else if (field === 'dod') {
-    ($('dodField') as HTMLTextAreaElement).value = ($('rescopeDod') as HTMLTextAreaElement).value;
-    duckSay("Definition of Done updated. Re-verify!");
-  }
-  playQuack(); scheduleSave();
+export function copyRescopeField(field: string): void {
+  const el = field === 'rewrite' ? $('rescopeRewriteDisplay') : $('rescopeDodDisplay');
+  const text = el.textContent || '';
+  if (!text) { duckSay("Nothing to copy."); return; }
+  navigator.clipboard.writeText(text).then(() => {
+    duckSay(field === 'rewrite' ? "Rewrite copied! Paste it where you need it." : "DoD copied! Paste it where you need it.");
+    playQuack();
+  }).catch(() => {
+    duckSay("Copy failed — try selecting and copying manually.");
+  });
 }
 
 export function hideRescope(): void {

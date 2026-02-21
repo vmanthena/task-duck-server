@@ -37,12 +37,58 @@ export function getScopeItems(): ScopeItem[] {
   })).filter(s => s.text);
 }
 
+// Scrum Fibonacci SP → expected minutes of focused work
+const SP_MINUTES: Record<number, number> = {
+  1: 120, 2: 240, 3: 480, 5: 720, 8: 1200, 13: 1920
+};
+
+function spToMinutes(sp: number): number {
+  if (SP_MINUTES[sp]) return SP_MINUTES[sp];
+  // Interpolate for non-Fibonacci values
+  const keys = Object.keys(SP_MINUTES).map(Number).sort((a, b) => a - b);
+  if (sp < keys[0]) return Math.round(sp * (SP_MINUTES[keys[0]] / keys[0]));
+  if (sp > keys[keys.length - 1]) return Math.round(sp * (SP_MINUTES[keys[keys.length - 1]] / keys[keys.length - 1]));
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (sp > keys[i] && sp < keys[i + 1]) {
+      const ratio = (sp - keys[i]) / (keys[i + 1] - keys[i]);
+      return Math.round(SP_MINUTES[keys[i]] + ratio * (SP_MINUTES[keys[i + 1]] - SP_MINUTES[keys[i]]));
+    }
+  }
+  return sp * 120;
+}
+
 export function updateTimeSummary(): void {
   const items = getScopeItems();
   const total = items.reduce((a, b) => a + b.minutes, 0);
   const el = $('totalTime');
   el.textContent = total ? `${total} min (~${(total / 60).toFixed(1)}h)` : '0 min';
   el.className = total > 240 ? 'ts-warn' : total > 0 ? 'ts-ok' : 'ts-value';
+
+  // SP fit validation
+  const fitEl = $('spFit');
+  const spVal = parseInt(($('storyPointsField') as HTMLInputElement).value);
+  if (!fitEl) return;
+  if (isNaN(spVal) || spVal <= 0 || total <= 0) {
+    fitEl.style.display = 'none';
+    return;
+  }
+  const expected = spToMinutes(spVal);
+  const variance = 0.05;
+  const lo = expected * (1 - variance);
+  const hi = expected * (1 + variance);
+  const diff = total - expected;
+  const pct = Math.round(Math.abs(diff) / expected * 100);
+  fitEl.style.display = '';
+  if (total >= lo && total <= hi) {
+    fitEl.className = 'sp-fit sp-fit-ok';
+    fitEl.textContent = `Fits ${spVal} SP (~${expected} min expected)`;
+  } else if (total < lo) {
+    fitEl.className = 'sp-fit sp-fit-under';
+    fitEl.textContent = `${pct}% under ${spVal} SP estimate (${total} vs ~${expected} min)`;
+  } else {
+    fitEl.className = 'sp-fit sp-fit-over';
+    fitEl.textContent = `${pct}% over ${spVal} SP estimate (${total} vs ~${expected} min)`;
+  }
 }
 
 export function checkScope(): void {

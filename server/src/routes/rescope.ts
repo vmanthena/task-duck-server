@@ -4,6 +4,7 @@ import { CUSTOM_MASKS_RAW } from '../config.js';
 import { DataMasker } from '../services/dataMasker.js';
 import { providers, getProviderKey } from '../services/llmService.js';
 import { RESCOPE_PROMPT, RESCOPE_USR } from '../prompts/rescope.js';
+import { repairJSON } from '../services/jsonRepair.js';
 import { createLogger } from '../../../shared/logger.js';
 
 const log = createLogger('rescope');
@@ -11,7 +12,7 @@ const log = createLogger('rescope');
 const router = Router();
 
 router.post('/api/rescope', requireAuth, async (req, res) => {
-  const { provider, model, original, rewrite, dod, driftSummary } = req.body;
+  const { provider, model, original, rewrite, dod, driftSummary, justification, storyPoints } = req.body;
   if (!provider || !original || !rewrite) {
     res.status(400).json({ error: 'Missing fields' });
     return;
@@ -31,17 +32,19 @@ router.post('/api/rescope', requireAuth, async (req, res) => {
       .replace('{ORIGINAL}', m.mask(original))
       .replace('{REWRITE}', m.mask(rewrite))
       .replace('{DOD}', m.mask(dod || '') || '(not specified)')
-      .replace('{DRIFT_SUMMARY}', m.mask(driftSummary || '') || '(none)');
+      .replace('{DRIFT_SUMMARY}', m.mask(driftSummary || '') || '(none)')
+      .replace('{JUSTIFICATION}', m.mask(justification || '') || '(none provided)')
+      .replace('{STORY_POINTS}', storyPoints ? String(storyPoints) : '(not provided)');
     const raw = await providers[provider](RESCOPE_PROMPT, up, model);
     if (!raw || !raw.trim()) throw new Error(`${provider} returned empty response`);
-    let p;
-    try {
-      let cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
-      const fb = cleaned.indexOf('{'), lb = cleaned.lastIndexOf('}');
-      if (fb !== -1 && lb > fb) cleaned = cleaned.substring(fb, lb + 1);
-      p = JSON.parse(cleaned);
-    } catch {
-      p = { corrected_rewrite: '', corrected_dod: '', changes_made: ['Could not parse AI response'], duck_quote: 'Try again!' };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let p: Record<string, any>;
+    const repaired = repairJSON(raw);
+    if (repaired) {
+      p = repaired;
+    } else {
+      log.error(`JSON parse failed for ${provider}`, raw.substring(0, 500));
+      p = { corrected_rewrite: '', corrected_dod: '', changes_made: ['Could not parse AI response'], suggested_story_points: null, duck_quote: 'Try again!' };
     }
     // Unmask
     if (p.corrected_rewrite) p.corrected_rewrite = m.unmask(p.corrected_rewrite);

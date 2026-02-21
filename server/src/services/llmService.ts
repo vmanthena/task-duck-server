@@ -3,7 +3,7 @@ import type { LLMCallFn } from '../types.js';
 import { createLogger } from '../../../shared/logger.js';
 
 const log = createLogger('llm');
-
+const MAX_TOKENS = 16384;
 // Retry helper — backs off on 429/529 (overloaded)
 async function fetchWithRetry(url: string, opts: RequestInit, retries = 3): Promise<Response> {
   for (let i = 0; i < retries; i++) {
@@ -24,7 +24,7 @@ const callAnthropic: LLMCallFn = async (s, u, modelOverride) => {
   const r = await fetchWithRetry('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: useModel, max_tokens: 2048, system: s, messages: [{ role: 'user', content: u }] })
+    body: JSON.stringify({ model: useModel, max_tokens: MAX_TOKENS, system: s, messages: [{ role: 'user', content: u }] })
   });
   if (!r.ok) {
     const text = await r.text();
@@ -44,7 +44,7 @@ const callOpenAI: LLMCallFn = async (s, u, _model) => {
   const r = await fetchWithRetry('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
-    body: JSON.stringify({ model: 'gpt-4o', max_tokens: 2048, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: s }, { role: 'user', content: u }] })
+    body: JSON.stringify({ model: 'gpt-4o', max_tokens: MAX_TOKENS, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: s }, { role: 'user', content: u }] })
   });
   if (!r.ok) {
     const text = await r.text();
@@ -68,7 +68,7 @@ const callGemini: LLMCallFn = async (s, u, _model) => {
     body: JSON.stringify({
       system_instruction: { parts: [{ text: s }] },
       contents: [{ parts: [{ text: u }] }],
-      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 2048 }
+      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: MAX_TOKENS }
     })
   });
   if (!r.ok) {
@@ -85,7 +85,7 @@ const callOllama: LLMCallFn = async (s, u, modelOverride) => {
   const r = await fetchWithRetry(`${OLLAMA_BASE_URL}/v1/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: useModel, max_tokens: 2048, messages: [{ role: 'system', content: s }, { role: 'user', content: u }] })
+    body: JSON.stringify({ model: useModel, max_tokens: MAX_TOKENS, messages: [{ role: 'system', content: s }, { role: 'user', content: u }] })
   });
   if (!r.ok) {
     const text = await r.text();
@@ -106,7 +106,7 @@ const callMock: LLMCallFn = async (systemPrompt, _userPrompt, _model) => {
   const delay = 500 + Math.random() * 500;
   await new Promise(res => setTimeout(res, delay));
 
-  const isRescope = systemPrompt.includes('Task Scope Corrector');
+  const isRescope = systemPrompt.includes('Scope Re-evaluator');
 
   if (isRescope) {
     return JSON.stringify({
@@ -117,6 +117,7 @@ const callMock: LLMCallFn = async (systemPrompt, _userPrompt, _model) => {
         "Added back error handling requirement from original",
         "Simplified approach to match original scope"
       ],
+      suggested_story_points: 3,
       duck_quote: "Mock duck says: stay in scope! 🦆"
     });
   }

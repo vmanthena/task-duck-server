@@ -16,6 +16,7 @@ function gatherData() {
     peerWho: ($('peerWho') as HTMLTextAreaElement).value,
     peerSurprise: ($('peerSurprise') as HTMLTextAreaElement).value,
     parkingLot: ($('parkingLot') as HTMLTextAreaElement).value,
+    storyPoints: ($('storyPointsField') as HTMLInputElement).value,
   };
 }
 
@@ -28,6 +29,8 @@ export function printPlan(): void {
   h += `<h3 style="font-size:11pt;margin:6pt 0 3pt">Deliverable</h3><p style="font-size:10pt">${esc(($('deliverableField') as HTMLTextAreaElement).value)}</p>`;
   h += `<h3 style="font-size:11pt;margin:6pt 0 3pt">Definition of Done</h3><p style="font-size:10pt">${esc(($('dodField') as HTMLTextAreaElement).value)}</p>`;
   h += `<h3 style="font-size:11pt;margin:6pt 0 3pt">NOT In Scope</h3><p style="font-size:10pt;color:#c00">${esc(($('notAskedField') as HTMLTextAreaElement).value)}</p><hr style="margin:8pt 0">`;
+  const sp = ($('storyPointsField') as HTMLInputElement).value;
+  if (sp) h += `<p style="font-size:10pt;font-weight:600;color:#666;margin:4pt 0">Story Points: ${esc(sp)}</p>`;
   h += `<h3 style="font-size:11pt;margin:6pt 0 3pt">Scope Checklist (${total} min)</h3>`;
   scope.forEach(s => { h += `<div style="margin:4pt 0;font-size:10pt">☐ ${esc(s.text)} <span style="color:#888">(${s.minutes}m)</span></div>`; });
   const approach = ($('approachField') as HTMLTextAreaElement).value;
@@ -63,6 +66,7 @@ export function exportMarkdown(): void {
   const d = gatherData(), scope = getScopeItems();
   let md = `## 🦆 Task Duck — ${d.taskId} ${d.title}\n\n**Date:** ${new Date().toLocaleDateString()}\n\n`;
   md += `### What's Being Asked\n${d.ask}\n\n### Deliverable\n${d.deliverable}\n\n### Definition of Done\n${d.dod}\n\n### NOT In Scope\n${d.notAsked}\n\n`;
+  if (d.storyPoints) md += `**Story Points:** ${d.storyPoints}\n\n`;
   md += `### Scope\n${scope.map(s => `- [ ] ${s.text} (${s.minutes}m)`).join('\n')}\n\n`;
   if (d.approach) md += `### Approach\n${d.approach}\n\n`;
   if (d.parkingLot) md += `### Parking Lot\n${d.parkingLot}\n\n`;

@@ -29,6 +29,7 @@ interface HistoryItem {
   peerSurprise: string;
   parkingLot: string;
   scope: { text: string; minutes: number }[];
+  storyPoints: string;
   driftReason: string;
   lastVerdict: string | null;
   workTime: number;
@@ -64,6 +65,7 @@ export function saveToHistory(score: number, done: number, total: number, extras
     peerSurprise: ($('peerSurprise') as HTMLTextAreaElement).value,
     parkingLot: ($('parkingLot') as HTMLTextAreaElement).value,
     scope: getScopeItems(),
+    storyPoints: ($('storyPointsField') as HTMLInputElement).value,
     driftReason: ($('driftReason') as HTMLInputElement).value,
     lastVerdict: state.lastVerdict,
     workTime: state.workTimerSeconds,
@@ -112,6 +114,7 @@ export function resumeTask(idx: number): void {
   ($('peerWho') as HTMLTextAreaElement).value = item.peerWho || '';
   ($('peerSurprise') as HTMLTextAreaElement).value = item.peerSurprise || '';
   ($('parkingLot') as HTMLTextAreaElement).value = item.parkingLot || '';
+  ($('storyPointsField') as HTMLInputElement).value = item.storyPoints || '';
   ($('driftReason') as HTMLInputElement).value = item.driftReason || '';
   if (item.scope?.length) {
     $('scopeList').innerHTML = '';
@@ -166,7 +169,7 @@ export function toggleHistory(): void {
 }
 
 export function resetAll(silent?: boolean): void {
-  ['rawTaskField', 'askField', 'deliverableField', 'dodField', 'notAskedField', 'taskIdField', 'taskTitleField', 'approachField', 'peerWho', 'peerSurprise', 'parkingLot', 'driftReason'].forEach(id => {
+  ['rawTaskField', 'askField', 'deliverableField', 'dodField', 'notAskedField', 'taskIdField', 'taskTitleField', 'storyPointsField', 'approachField', 'peerWho', 'peerSurprise', 'parkingLot', 'driftReason', 'rescopeJustification'].forEach(id => {
     ($(id) as HTMLInputElement | HTMLTextAreaElement).value = '';
   });
   initScope(); updateTimeSummary();

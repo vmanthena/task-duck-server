@@ -194,6 +194,33 @@
   color: var(--green);
 }
 
+.sp-fit {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  margin-top: 0.3rem;
+}
+
+.sp-fit-ok {
+  color: var(--green);
+  background: var(--green-dim);
+  border-left: 3px solid var(--green);
+}
+
+.sp-fit-under {
+  color: var(--blue);
+  background: var(--blue-dim);
+  border-left: 3px solid var(--blue);
+}
+
+.sp-fit-over {
+  color: var(--red);
+  background: var(--red-dim, rgba(255, 60, 60, 0.1));
+  border-left: 3px solid var(--red);
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

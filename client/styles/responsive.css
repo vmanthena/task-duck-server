@@ -24,6 +24,7 @@
   }
 
   .field-row,
+  .field-row-3,
   .compare-zone {
     grid-template-columns: 1fr;
   }

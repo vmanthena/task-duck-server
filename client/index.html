@@ -44,7 +44,7 @@
     <div class="step active" id="step1">
       <div class="step-header" onclick="reopenStep(1)"><div class="step-number"><span>1</span></div><div class="step-title">Read & Rewrite</div><div class="step-tag" style="background:var(--blue-dim);color:var(--blue)">understand</div></div>
       <div class="step-body">
-        <div class="field-row" style="margin-bottom:.85rem"><div class="field" style="margin:0"><label>Task ID</label><input type="text" id="taskIdField" placeholder="JIRA-1234..." autocomplete="off" spellcheck="false"></div><div class="field" style="margin:0"><label>Title</label><input type="text" id="taskTitleField" placeholder="Short title..." autocomplete="off"></div></div>
+        <div class="field-row field-row-3" style="margin-bottom:.85rem"><div class="field" style="margin:0"><label>Task ID</label><input type="text" id="taskIdField" placeholder="JIRA-1234..." autocomplete="off" spellcheck="false"></div><div class="field" style="margin:0"><label>Title</label><input type="text" id="taskTitleField" placeholder="Short title..." autocomplete="off"></div><div class="field" style="margin:0"><label>Story Points</label><input type="number" id="storyPointsField" placeholder="SP" min="0" max="100" style="width:100%" oninput="updateTimeSummary()"></div></div>
         <div class="compare-zone"><div class="field" style="margin:0"><label>Raw Task <span class="badge badge-original">original</span></label><textarea class="tall" id="rawTaskField" placeholder="Paste the original ticket verbatim..."></textarea></div><div class="field" style="margin:0"><label>Your Understanding <span class="badge badge-yours">rewrite</span></label><textarea class="tall" id="askField" placeholder="Rewrite: what is ACTUALLY being asked?"></textarea></div></div>
         <div class="field"><label>Deliverable</label><textarea class="short" id="deliverableField" placeholder="A PR? Config change? Document?"></textarea></div>
         <div class="field"><label>✅ Definition of Done</label><textarea class="short" id="dodField" placeholder="How do I know I'm finished? Be specific."></textarea></div>
@@ -52,13 +52,23 @@
         <div class="step-actions"><div class="provider-bar" id="providerBar"><span style="font-family:var(--mono);font-size:.65rem;color:var(--text-muted);padding:.3rem 0">AI:</span></div><button class="btn btn-ghost btn-sm" onclick="verifyUnderstanding()" id="verifyBtn" disabled>🦆 Verify</button><button class="btn btn-primary" onclick="completeStep(1)" id="step1Btn">Lock it in →</button></div>
         <div class="verify-loading" id="verifyLoading"><div class="spinner"></div><span>Masking & verifying...</span></div>
         <div class="verify-result" id="verifyResult"></div>
-        <div class="drift-override" id="driftOverride"><div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" style="border-color:var(--blue);color:var(--blue)" onclick="requestRescope()">🦆 Fix my scope</button><span style="font-family:var(--mono);font-size:.6rem;color:var(--text-muted)">or proceed:</span><input type="text" id="driftReason" placeholder="Why I'm ignoring drift..." style="flex:1;min-width:140px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.4rem .6rem;color:var(--text);font-size:.8rem;outline:none"></div></div>
+        <div class="drift-override" id="driftOverride">
+          <div class="drift-rescope-group">
+            <div class="field" style="margin:0"><label style="color:var(--orange)">Justification for scope change (required)</label><textarea id="rescopeJustification" class="short" placeholder="Explain WHY the scope needs to change — new requirements, blockers, dependencies..."></textarea></div>
+            <button class="btn btn-primary btn-sm drift-action-btn" onclick="requestRescope()">🦆 Re-evaluate scope</button>
+          </div>
+          <div class="drift-divider"><span>or proceed without fixing</span></div>
+          <div class="drift-proceed-group">
+            <input type="text" id="driftReason" placeholder="Why I'm ignoring drift..." style="flex:1;min-width:140px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.4rem .6rem;color:var(--text);font-size:.8rem;outline:none">
+          </div>
+        </div>
         <div class="rescope-loading" id="rescopeLoading"><div class="spinner"></div><span>Re-scoping...</span></div>
         <div class="rescope-section" id="rescopeSection">
-          <div class="rescope-header"><span>🦆 Suggested Re-scope</span><button class="dismiss" onclick="hideRescope()">✕</button></div>
+          <div class="rescope-header"><span>🦆 Re-evaluated Scope</span><button class="dismiss" onclick="hideRescope()">✕</button></div>
           <div class="rescope-changes" id="rescopeChanges"></div>
-          <div class="rescope-field"><label>Suggested Rewrite</label><textarea id="rescopeRewrite" readonly></textarea><button class="btn btn-ghost btn-sm rescope-apply" onclick="applyRescope('rewrite')">↑ Apply to my rewrite</button></div>
-          <div class="rescope-field"><label>Suggested Definition of Done</label><textarea id="rescopeDod" readonly class="short"></textarea><button class="btn btn-ghost btn-sm rescope-apply" onclick="applyRescope('dod')">↑ Apply to my DoD</button></div>
+          <div class="rescope-field"><label>Suggested Rewrite</label><div class="rescope-readonly" id="rescopeRewriteDisplay"></div><button class="btn btn-ghost btn-sm rescope-copy" onclick="copyRescopeField('rewrite')">📋 Copy</button></div>
+          <div class="rescope-field"><label>Suggested Definition of Done</label><div class="rescope-readonly" id="rescopeDodDisplay"></div><button class="btn btn-ghost btn-sm rescope-copy" onclick="copyRescopeField('dod')">📋 Copy</button></div>
+          <div class="rescope-field rescope-points-field" id="rescopePointsField" style="display:none"><label>Suggested Story Points</label><div class="rescope-points" id="rescopePointsDisplay"></div></div>
           <div class="rescope-duck" id="rescopeDuck"></div>
         </div>
       </div>
@@ -73,6 +83,7 @@
           <div class="scope-list" id="scopeList"></div>
           <button class="add-scope-btn" onclick="addScope()" id="addScopeBtn">+ Add item</button>
           <div class="time-summary" id="timeSummary"><span class="ts-label">Total:</span><span class="ts-value" id="totalTime">0 min</span></div>
+          <div class="sp-fit" id="spFit" style="display:none"></div>
         </div>
         <div class="field"><label>🔧 Approach — files/services I will touch</label><textarea id="approachField" placeholder="List specific files, services, configs you plan to modify..."></textarea></div>
         <div class="peer-section"><div class="field" style="margin-bottom:.5rem"><label>👥 Who reviews this?</label><textarea class="short" id="peerWho" placeholder="Name/team..."></textarea></div><div class="field" style="margin:0"><label>What would SURPRISE them in your diff?</label><textarea class="short" id="peerSurprise" placeholder="Think from reviewer's perspective..."></textarea></div></div>

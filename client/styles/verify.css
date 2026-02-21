@@ -252,14 +252,185 @@
   min-height: 60px;
 }
 
-.rescope-apply {
+.rescope-readonly {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  user-select: text;
+  min-height: 40px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.rescope-copy {
   margin-top: 0.25rem;
   border-color: var(--blue) !important;
   color: var(--blue) !important;
 }
 
-.rescope-apply:hover {
+.rescope-copy:hover {
   background: var(--blue-dim) !important;
+}
+
+.rescope-points {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.3rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.rescope-sp-original {
+  color: var(--text-dim);
+  text-decoration: line-through;
+}
+
+.rescope-sp-arrow {
+  font-size: 1rem;
+}
+
+.rescope-sp-suggested {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.rescope-sp-diff {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.rescope-sp-lower {
+  color: var(--green);
+}
+
+.rescope-sp-higher {
+  color: var(--red);
+}
+
+.rescope-sp-same {
+  color: var(--text-dim);
+}
+
+.rescope-sp-split {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--red);
+  background: var(--red-dim, rgba(255, 60, 60, 0.1));
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.vr-sp-split {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--red);
+  margin-top: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--red-dim, rgba(255, 60, 60, 0.1));
+  border-radius: 6px;
+  border-left: 3px solid var(--red);
+}
+
+.rescope-points-field {
+  margin-bottom: 0.5rem;
+}
+
+.vr-story-points {
+  margin-bottom: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.vr-story-points .vr-section-title {
+  margin-bottom: 0.3rem;
+}
+
+.vr-sp-assessment {
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin-bottom: 0.2rem;
+}
+
+.vr-sp-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  margin-right: 0.3rem;
+}
+
+.vr-sp-bloated {
+  background: var(--red);
+  color: #fff;
+}
+
+.vr-sp-ok {
+  background: var(--green);
+  color: var(--bg);
+}
+
+.field-row-3 {
+  grid-template-columns: 1fr 2fr 90px;
+}
+
+.drift-rescope-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.drift-rescope-group .field {
+  margin: 0;
+}
+
+.drift-action-btn {
+  align-self: flex-start;
+}
+
+.drift-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.drift-divider::before,
+.drift-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.drift-divider span {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.drift-proceed-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .rescope-duck {
