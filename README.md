@@ -1,189 +1,399 @@
-# 🦆 Task Duck — AI-Powered Scope Discipline Tool
+# Task Duck
 
-**BUILD · ARCHITECT · SHIP** — one task at a time.
+**AI-powered scope discipline tool that enforces a READ > PLAN > EXECUTE > CHECK workflow for development tasks.**
 
-Task Duck is a self-hosted web app that forces disciplined task execution through a structured READ → WRITE → CHECK workflow, with AI-powered verification to catch scope drift before you start working.
+Task Duck is a self-hosted web app that catches scope drift before you start coding. Paste the original task, rewrite your understanding, and let AI verify the gap. Then fence your scope, track your execution, and ship with an accuracy score.
+
+## Table of Contents
+
+- [Workflow](#workflow)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Environment Variables](#environment-variables)
+- [Sensitive Data Masking](#sensitive-data-masking)
+- [API Reference](#api-reference)
+- [Architecture](#architecture)
+- [Deployment](#deployment)
+- [Testing](#testing)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
+- [License](#license)
+
+## Workflow
+
+Task Duck enforces a strict 4-step loop for every task:
+
+### Step 1: Read and Rewrite
+
+Paste the original ticket verbatim, then rewrite what you think is actually being asked. Fill in the deliverable, definition of done, and what is explicitly NOT in scope. Select an AI provider and hit **Verify** to compare your rewrite against the original.
+
+The AI returns a structured verdict:
+
+- **match** — your understanding aligns with the original
+- **drift** — you added scope that was not asked for
+- **missing** — you left out requirements from the original
+- **major_mismatch** — significant misunderstanding detected
+
+Each verdict includes confidence score, specific drift items, missing items, assumptions, definition of done assessment, spelling/grammar issues, story point evaluation, and suggestions. If drift is detected, you can either fix your rewrite or request an AI-powered **re-scope** with a justification for why the scope needs to change. The re-scope returns a corrected rewrite, corrected definition of done, a list of what changed and why, and suggested story points.
+
+Story point validation uses the Scrum Fibonacci scale (1, 2, 3, 5, 8, 13). The AI flags estimates that are bloated relative to the described scope and recommends splitting stories at 8+ points.
+
+### Step 2: Plan and Fence
+
+Define 1 to 5 concrete scope items with time estimates in minutes. Total time is calculated and compared against your story point estimate (if provided), with color-coded fit indicators showing whether your plan matches the estimate.
+
+Additional planning fields:
+
+- **Approach** — files and services you will touch
+- **Peer reviewer** — who reviews this work
+- **Surprise check** — what would surprise your reviewer in the diff
+- **Parking lot** — "while I'm in here" ideas that should NOT go in your PR
+
+Print the plan as a formatted checklist for reference.
+
+### Step 3: Execute
+
+The work timer starts. A diff tracker displays your planned items with toggleable status (TODO, DONE, SKIP). If you do unplanned work, add it as an **extra** (penalizes your accuracy score by 10 points each). If scope legitimately needs to change mid-work, record a **scope amendment** with justification (amendments do not penalize your score).
+
+Every 30 minutes the duck interrupts with a checkpoint modal asking which scope item you are currently working on and whether you are still inside the fence.
+
+### Step 4: Pre-Push Check
+
+Answer a series of verification questions before shipping:
+
+- Definition of done is met
+- Diff only contains task-related changes
+- Only touched files listed in approach
+- Reviewer would not ask "why did you change this?"
+- No gold-plating beyond what was asked
+- Every extra item is justified (if any exist)
+
+All checks must pass before the Ship button enables.
+
+### Completion
+
+Accuracy score is calculated: `(done / planned) * 100 - (extras * 10)`, clamped to 0-100. The score is color-coded (green >= 80%, orange >= 50%, red < 50%) with a contextual duck message. Results are saved to history and the draft is cleared. Export as markdown or print the final report.
 
 ## Features
 
-- **Side-by-side task comparison** — Paste the original, rewrite your understanding, AI catches the drift
-- **Multi-provider AI verification** — Claude, GPT-4o, and Gemini support
-- **Sensitive data masking** — Automatic + custom rules mask PII/secrets before sending to any LLM
-- **Scope fencing with time-boxing** — 3-5 items max, with time estimates and duck warnings
-- **30-minute checkpoint timer** — The duck interrupts you to check if you've drifted
-- **Diff tracker** — Planned vs actual execution tracking with accuracy scores
-- **Peer impact check** — "Who else will this touch?" before you ship
-- **Markdown export** — Ready-to-paste PR descriptions with Ctrl+M
-- **Printable checklists** — Clean table-based printout for journaling
-- **Password-protected** — Scrypt-hashed auth with JWT sessions
-- **Docker-ready** — Single container, env-file config
+### AI-Powered Verification
+
+- **Multi-provider support** — Anthropic Claude, OpenAI GPT-4o, Google Gemini, local Ollama, and a Mock provider for development
+- **Structured JSON verdicts** — confidence scores, categorized drift items, actionable suggestions
+- **AI-powered rescoping** — when drift is justified, the AI generates a corrected rewrite with updated definition of done and story points
+- **Truncated JSON repair** — recovers partial LLM responses using progressive strategies (direct parse, fence stripping, structure closing)
+- **Model overrides** — configure preferred models per provider via environment variables
+
+### Sensitive Data Masking
+
+- **10 automatic patterns** — email, IP, URL, API key, UUID, database connection string, file path, phone number, SSN, AWS ARN
+- **Custom masking rules** — add project-specific terms via `CUSTOM_MASKS` environment variable
+- **Round-trip fidelity** — data masked before sending to LLM, unmasked in the response
+- **Masking report** — each verification shows how many items were masked and what categories
+
+### Scope Discipline
+
+- **5-item scope fence** — maximum 5 planned items forces decomposition of large tasks
+- **Time-boxing with SP validation** — total minutes compared against Fibonacci story point estimates with color-coded fit indicators
+- **30-minute checkpoint timer** — modal interrupts asking if you are still inside the fence
+- **Parking lot field** — captures "while I'm in here" ideas without letting them into scope
+- **Explicit NOT-in-scope field** — documents what is out of bounds before starting work
+- **Creep alerts** — duck warnings when extras are added or scope limits are exceeded
+
+### Execution Tracking
+
+- **Diff tracker** — planned items with toggleable TODO/DONE/SKIP status
+- **Extra work tracking** — unplanned items recorded separately with a -10 point accuracy penalty each
+- **Scope amendments** — justified scope changes recorded without penalty
+- **Work timer** — start, pause, resume with elapsed time displayed in the header
+- **Accuracy scoring** — quantified discipline metric based on planned vs actual execution
+
+### Draft and History
+
+- **Autosave** — all form data saved to localStorage every 5 seconds with debounce
+- **Draft recovery** — on page reload, the duck offers to restore your in-progress work
+- **Task history** — up to 50 completed tasks stored locally with resume, clone, and delete actions
+- **Trend dashboard** — average accuracy, average time, total extras, and a sparkline chart across the last 20 tasks (appears after 3+ completed tasks)
+
+### Export
+
+- **Markdown export** — task summary formatted for PR descriptions (Ctrl+M)
+- **Print plan** — formatted checklist from Step 2 for journaling or desk reference
+- **Print final report** — completion summary with diff items, extras, amendments, and accuracy score
+
+### Security
+
+- **Challenge-response authentication** — bcrypt-based with SHA-256 proof, not plain password transmission
+- **JWT sessions** — HMAC-SHA256 signed tokens with configurable expiry
+- **Rate limiting** — 3 failed login attempts trigger 20-minute IP lockout
+- **Input sanitization** — XSS pattern stripping on all POST bodies, 10KB string limit, 50KB body limit
+- **Security headers** — CSP, HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Permissions-Policy, Referrer-Policy
+- **Same-origin CORS** — API routes reject cross-origin requests
+- **Open auth mode** — when `PASSWORD_VERIFIER` is not set, login grants tokens without a password (development use)
+
+### Duck Personality
+
+- **10 contextual quotes** — scope discipline wisdom triggered by clicking the duck or pressing Escape
+- **Quack sound effect** — plays on drift detection, checkpoint, extra work, and wrong passwords (toggleable)
+- **Contextual messages** — the duck speaks throughout the workflow with step-specific guidance
 
 ## Quick Start
 
 ```bash
-# 1. Clone / copy the project
+# Clone the repo
+git clone https://github.com/vmanthena/task-duck-server.git
 cd task-duck-server
 
-# 2. Install dependencies
+# Install dependencies
 npm install
 
-# 3. Generate your password hash (interactive, masked input)
-node hash-password.js
-# Or directly:
-node hash-password.js "your-secure-password"
+# Generate your password credentials
+npm run hash
+# Follow the prompts — outputs BCRYPT_SALT and PASSWORD_VERIFIER
 
-# 4. Copy .env template and paste the hash
+# Copy the env template and fill in your values
 cp .env.example .env
-# Edit .env → set PASSWORD_HASH, API keys, optional CUSTOM_MASKS
+# Edit .env: paste BCRYPT_SALT, PASSWORD_VERIFIER, add at least one API key
 
-# 5. Run with Docker
+# Build and start
+npm run build
+npm start
+# Access at http://localhost:8080
+```
+
+### Development Mode
+
+```bash
+npm run dev        # Starts server (tsx --watch) + client (esbuild --watch) concurrently
+npm run dev:server # Server only with hot reload
+npm run dev:client # Client only with watch mode
+```
+
+If no API keys are configured, a **Mock (Dev)** provider is automatically available that returns realistic verification and rescope responses.
+
+### Docker
+
+```bash
+# Pull from GHCR and run
 docker compose up -d
 
-# 6. Access at https://your-domain:3456
+# Or build locally
+docker compose -f docker-compose.build.yml up -d --build
 ```
 
-### Generate hash inside Docker (no local Node needed)
-
-```bash
-docker compose run --rm task-duck node hash-password.js
-```
-
-### Verify a hash
-
-```bash
-node hash-password.js --verify "my-password" '$argon2id$v=19$m=131072,t=5,p=8$...'
-```
+The Dockerfile uses a multi-stage build: Stage 1 builds with devDependencies, Stage 2 copies only `dist/` and runtime deps. Final image runs as non-root user with a health check.
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|---|---|---|
-| `PASSWORD_HASH` | Yes | Scrypt password hash (generate via `/api/hash-password`) |
-| `JWT_SECRET` | Recommended | Session signing secret (auto-generated if empty) |
-| `SESSION_HOURS` | No | Token expiry (default: 24) |
-| `ANTHROPIC_API_KEY` | At least one | Claude API key |
-| `OPENAI_API_KEY` | provider | OpenAI API key |
-| `GEMINI_API_KEY` | needed | Gemini API key |
-| `CUSTOM_MASKS` | No | Custom masking rules (see below) |
-| `PORT` | No | Server port (default: 3000) |
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `BCRYPT_SALT` | Yes | — | Bcrypt salt (generated via `npm run hash`) |
+| `PASSWORD_VERIFIER` | No | — | Password verifier hash (omit for open auth) |
+| `BCRYPT_COST` | No | `15` | Bcrypt cost factor (15-16) |
+| `JWT_SECRET` | No | auto-generated | Session signing secret (set for persistence across restarts) |
+| `SESSION_HOURS` | No | `24` | Token expiry in hours |
+| `ANTHROPIC_API_KEY` | At least one | — | Anthropic Claude API key |
+| `OPENAI_API_KEY` | provider key | — | OpenAI API key |
+| `GEMINI_API_KEY` | needed | — | Google Gemini API key |
+| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Local Ollama instance URL |
+| `OLLAMA_MODEL` | No | `qwen2.5:7b` | Ollama model name |
+| `ANTHROPIC_MODEL` | No | `claude-sonnet-4-20250514` | Override default Anthropic model |
+| `GEMINI_MODEL` | No | `gemini-2.0-flash-lite` | Override default Gemini model |
+| `CUSTOM_MASKS` | No | — | Custom masking rules (see below) |
+| `PORT` | No | `8080` | Server port |
+| `LOG_LEVEL` | No | `info` | Log level: debug, info, warn, error |
 
 ## Sensitive Data Masking
 
 ### Automatic Detection (always active)
-- Email addresses
-- IP addresses
-- URLs and file paths
-- API keys and tokens
-- UUIDs
-- Database connection strings
-- Phone numbers and SSNs
-- AWS ARNs
-- Kubernetes namespaces
 
-### Custom Masking Rules
+10 patterns are detected and replaced with numbered placeholders before any text is sent to an LLM:
 
-Add terms specific to your environment in `.env`:
+| Pattern | Example | Placeholder |
+|---|---|---|
+| Email | `user@example.com` | `[EMAIL_1]` |
+| IP Address | `192.168.1.100` | `[IP_1]` |
+| URL | `https://api.example.com/v2` | `[URL_1]` |
+| API Key | `sk-ant-api03-abcdefghij` | `[APIKEY_1]` |
+| UUID | `550e8400-e29b-41d4-a716-446655440000` | `[UUID_1]` |
+| DB Connection | `postgres://user:pass@host:5432/db` | `[DBCONN_1]` |
+| File Path | `/home/user/documents/file.txt` | `[PATH_1]` |
+| Phone | `555-123-4567` | `[PHONE_1]` |
+| SSN | `123-45-6789` | `[SSN_1]` |
+| AWS ARN | `arn:aws:s3:::my-bucket` | `[ARN_1]` |
+
+### Custom Rules
+
+Add project-specific terms in `.env`:
 
 ```env
-CUSTOM_MASKS=mycompany=COMPANY,prod-api.internal=SERVICE_A,custdb01=DATABASE_1,secretproject=PROJECT_X
+CUSTOM_MASKS=mycompany=COMPANY,prod-api.internal=SERVICE_A,custdb01=DATABASE_1
 ```
-
-The masker replaces these terms before sending to any LLM, and unmasks them in the response.
 
 ### How It Works
 
 ```
-YOUR INPUT:  "Update the endpoint at prod-api.internal/v2/customers to add pagination"
-SENT TO LLM: "Update the endpoint at [SERVICE_A]/v2/customers to add pagination"
-LLM RESPONSE: "The rewrite mentions redesigning [SERVICE_A] which is scope drift"
-YOU SEE:      "The rewrite mentions redesigning prod-api.internal which is scope drift"
+Your input:   "Update the endpoint at prod-api.internal/v2/customers"
+Sent to LLM:  "Update the endpoint at [SERVICE_A]/v2/customers"
+LLM response: "The rewrite mentions redesigning [SERVICE_A] which is drift"
+You see:       "The rewrite mentions redesigning prod-api.internal which is drift"
 ```
 
-The LLM never sees your actual service names, URLs, or credentials.
+The LLM never sees your actual service names, URLs, or credentials. Each verification response includes a masking report showing what was masked.
 
-## Nginx Proxy Manager Config
+## API Reference
 
-If you're using NPM (which you already have in your homelab):
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/health` | No | Health check (returns `{ status, version }`) |
+| `GET` | `/api/auth/challenge` | No | Get nonce, timestamp, bcrypt salt and cost |
+| `POST` | `/api/auth/login` | No | Submit proof, receive JWT token |
+| `GET` | `/api/providers` | Yes | List available LLM providers |
+| `POST` | `/api/verify` | Yes | Verify task understanding via AI |
+| `POST` | `/api/rescope` | Yes | Re-evaluate scope with justification |
 
-```
-Proxy Host: task-duck.yourdomain.com
-Forward: http://task-duck-container-ip:3000
-SSL: Force SSL, HTTP/2
-```
-
-## CI/CD — GitHub Actions + GHCR
-
-Every push to `main` automatically builds a multi-arch Docker image (`amd64` + `arm64`) and pushes it to GitHub Container Registry.
-
-**Tagging strategy:**
-
-| Trigger | Tags produced |
-|---|---|
-| Push to `main` | `latest`, `main`, `sha-abc1234` |
-| Tag `v1.2.3` | `1.2.3`, `1.2`, `sha-abc1234` |
-| Pull request | Build only (no push) |
-
-**Deploy from GHCR on your homelab:**
-
-```bash
-# Pull latest and restart
-docker compose pull && docker compose up -d
-```
-
-**Local build (dev):**
-
-```bash
-docker compose -f docker-compose.build.yml up -d --build
-```
-
-**Make image private or public:**
-
-By default GHCR images are private. To make it accessible only to you across machines, no changes needed — just `docker login ghcr.io` on your homelab with a PAT. To make it public, go to the package settings on GitHub.
+All `POST` bodies are sanitized (XSS patterns stripped, strings capped at 10KB, body capped at 50KB). Protected routes require `Authorization: Bearer <token>` header.
 
 ## Architecture
 
 ```
-┌─────────────┐     HTTPS      ┌──────────────────┐
-│   Browser    │ ◄────────────► │  Nginx Proxy Mgr │
-│  (Task Duck) │                │  (SSL termination)│
-└──────┬───────┘                └────────┬─────────┘
-       │                                 │
-       │            ┌────────────────────┘
-       │            ▼
-       │   ┌──────────────────┐
-       │   │   Task Duck      │
-       │   │   Node.js Server │
-       │   │                  │
-       │   │  ┌────────────┐  │      ┌─────────────┐
-       │   │  │  Masking    │──────► │ Claude API  │
-       │   │  │  Engine     │──────► │ OpenAI API  │
-       │   │  └────────────┘  │  ──► │ Gemini API  │
-       │   │                  │      └─────────────┘
-       │   │  Auth (scrypt)   │
-       │   │  JWT sessions    │
-       │   └──────────────────┘
-       │           Docker
+server/src/
+  index.ts              Entry point: dotenv, create app, start server
+  app.ts                Express app factory: middleware + routes
+  config.ts             Environment variable loading, diagnostics
+  types.ts              Shared TypeScript interfaces
+  middleware/
+    security.ts         CSP, HSTS, X-Frame-Options headers
+    cors.ts             Same-origin enforcement for /api/*
+    rateLimiter.ts      IP lockout (3 fails, 20 min)
+    sanitizer.ts        XSS stripping, size limits
+    auth.ts             JWT requireAuth middleware
+  services/
+    authService.ts      Nonce store, challenge-response, JWT
+    dataMasker.ts       10 regex patterns + custom masks
+    llmService.ts       Provider calls with retry, Mock provider
+    jsonRepair.ts       Truncated JSON recovery (4 strategies)
+  prompts/
+    verify.ts           System + user prompt templates
+    rescope.ts          Rescope prompt templates
+  routes/
+    health.ts           GET /api/health
+    auth.ts             Challenge-response auth endpoints
+    providers.ts        GET /api/providers
+    verify.ts           POST /api/verify
+    rescope.ts          POST /api/rescope
+
+client/src/
+  main.ts               Entry point, window bridge for onclick
+  state.ts              Centralized state object
+  auth.ts               Login flow, provider selection
+  verify.ts             AI verification and rescope UI
+  scope.ts              Scope items, time calculation
+  steps.ts              Step navigation
+  diff.ts               Diff tracker, extras, amendments
+  timer.ts              Work timer (start, pause, stop)
+  checkpoint.ts         30-minute checkpoint modal
+  checks.ts             Pre-push verification questions
+  ship.ts               Score calculation, completion screen
+  history.ts            Task history CRUD, trend dashboard
+  draft.ts              Autosave (5s debounce), restore
+  export.ts             Markdown and print export
+  duck.ts               Quotes, quack animation
+  sound.ts              Audio playback toggle
+  formData.ts           Form field gathering/setting
+  utils.ts              DOM helpers, score formatting
+  icons.ts              SVG icon definitions
+  shortcuts.ts          Keyboard shortcut bindings
+
+shared/
+  constants.ts          Shared values (version, thresholds, limits, storage keys)
+  logger.ts             Structured logger (JSON server, console client)
+```
+
+**Middleware chain order:** JSON parser > Security Headers > CORS > Input Sanitizer > Static Files > Routes > SPA Fallback
+
+**Runtime dependencies:** `express`, `bcryptjs`, `dotenv` (3 packages total)
+
+**Build toolchain:** TypeScript + esbuild for both server (Node 22 ESM) and client (browser ES2020)
+
+## Deployment
+
+### Docker Compose (GHCR)
+
+```yaml
+services:
+  task-duck:
+    image: ghcr.io/vmanthena/task-duck-server:latest
+    container_name: task-duck
+    restart: unless-stopped
+    ports:
+      - "3456:3000"
+    env_file:
+      - .env
+```
+
+### CI/CD
+
+Every push to `main` builds a multi-arch Docker image (amd64 + arm64) and pushes to GitHub Container Registry.
+
+| Trigger | Tags |
+|---|---|
+| Push to `main` | `latest`, `main`, `sha-<commit>` |
+| Tag `v1.2.3` | `1.2.3`, `1.2`, `sha-<commit>` |
+| Pull request | Build only (no push) |
+
+### Reverse Proxy (Nginx Proxy Manager)
+
+```
+Proxy Host: task-duck.yourdomain.com
+Forward:    http://task-duck:3000
+SSL:        Force SSL, HTTP/2
+```
+
+## Testing
+
+The test suite uses [Vitest](https://vitest.dev) with 227 tests across 23 test files covering unit, integration, and end-to-end layers.
+
+```bash
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run test:ui       # Browser UI
+npm run test:coverage # Coverage report (v8 provider)
+npm run test:server   # Server project only
+npm run test:client   # Client project only (happy-dom)
+npm run test:e2e      # End-to-end flow tests
+```
+
+### Test Structure
+
+```
+tests/
+  setup/              Server and client setup files
+  fixtures/           Mock requests, LLM responses, env presets
+  helpers/            Supertest app factory, fetch mocks
+  unit/
+    server/           Services, middleware, config, prompts
+    shared/           Constants, logger
+    client/           Utils, formData, score calculation
+  integration/        Route tests via supertest (health, auth, providers, verify, rescope)
+  e2e/                Full login > verify > rescope flow with Mock provider
+```
+
+### Other Commands
+
+```bash
+npm run typecheck     # TypeScript strict check (tsc --noEmit)
+npm run build         # Build server + client to dist/
+npm run hash          # Generate bcrypt credentials
 ```
 
 ## Keyboard Shortcuts
 
 | Key | Action |
 |---|---|
-| `Enter` | Advance to next step |
-| `Esc` | Random duck quote |
-| `Ctrl+P` | Print checklist |
+| `Escape` | Random duck quote |
+| `Ctrl+P` | Print plan checklist |
 | `Ctrl+M` | Export to Markdown |
-
-## API Endpoints
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/health` | No | Health check |
-| POST | `/api/login` | No | Authenticate, returns JWT |
-| GET | `/api/providers` | Yes | List configured LLM providers |
-| POST | `/api/verify` | Yes | Verify task understanding via AI |
-| POST | `/api/hash-password` | No | Generate password hash (setup only) |
 
 ## License
 
-Personal use. Built for Nitin's workflow by Task Duck.
+Personal use. Built for Nitin's workflow.
