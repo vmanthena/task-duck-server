@@ -89,15 +89,16 @@
 
   body::before,
   .login-overlay,
-  .sound-toggle,
-  .history-toggle,
+  .top-nav,
   .work-timer,
   .history-panel,
   .overlay,
   .creep-alert,
   .checkpoint-overlay,
   .md-overlay,
-  .autosave-indicator {
+  .autosave-indicator,
+  #onboardTooltip,
+  .toast-copied {
     display: none !important;
   }
 

@@ -2,23 +2,25 @@
 import { configureLogger } from '../../shared/logger.js';
 configureLogger({ level: 'info', server: false });
 
-import { updateSoundUI, toggleSound } from './sound.js';
+import { updateSoundUI, toggleSound, setVolume } from './sound.js';
 import { duckSay, quackDuck } from './duck.js';
 import { checkAuth } from './api.js';
 import { doLogin, togglePasswordVis, updateLockoutUI } from './auth.js';
-import { addScope, removeScope, updateTimeSummary, checkScope, initScope } from './scope.js';
+import { addScope, removeScope, updateTimeSummary, checkScope, initScope, applyTemplate } from './scope.js';
 import { activateStep, reopenStep, completeStep, goBack, pauseAndGoBack } from './steps.js';
-import { verifyUnderstanding, requestRescope, copyRescopeField, hideRescope } from './verify.js';
+import { verifyUnderstanding, requestRescope, copyRescopeField, hideRescope, toggleVrCollapse, toggleCompareMode, toggleVhEntry } from './verify.js';
 import { toggleDiffStatus, addExtra, showAmendment, submitAmendment } from './diff.js';
 import { toggleWorkTimer } from './timer.js';
 import { checkpointYes, checkpointNo, showCreep, hideCreep } from './checkpoint.js';
 import { toggleCheck } from './checks.js';
 import { shipIt } from './ship.js';
-import { renderHistory, resumeTask, cloneTask, deleteTask, toggleHistory, resetAll } from './history.js';
+import { renderHistory, resumeTask, cloneTask, deleteTask, templateFromTask, toggleHistory, resetAll } from './history.js';
 import { loadDraft } from './draft.js';
-import { printPlan, printFinal, exportMarkdown, closeMd, copyMd } from './export.js';
+import { printPlan, printFinal, exportMarkdown, closeMd, copyMd, copyShipSummary } from './export.js';
 import { initShortcuts } from './shortcuts.js';
 import { state } from './state.js';
+import { initOnboarding, dismissTooltip } from './onboarding.js';
+import { applyTheme, toggleTheme } from './theme.js';
 
 // Window bridge — expose all functions used by inline onclick handlers
 const w = window as unknown as Record<string, unknown>;
@@ -52,17 +54,28 @@ w.shipIt = shipIt;
 w.resumeTask = resumeTask;
 w.cloneTask = cloneTask;
 w.deleteTask = deleteTask;
+w.templateFromTask = templateFromTask;
 w.resetAll = resetAll;
 w.printPlan = printPlan;
 w.printFinal = printFinal;
 w.exportMarkdown = exportMarkdown;
 w.closeMd = closeMd;
 w.copyMd = copyMd;
+w.dismissTooltip = dismissTooltip;
+w.toggleVhEntry = toggleVhEntry;
+w.applyTemplate = applyTemplate;
+w.toggleCompareMode = toggleCompareMode;
+w.toggleVrCollapse = toggleVrCollapse;
+w.toggleTheme = toggleTheme;
+w.setVolume = setVolume;
+w.copyShipSummary = copyShipSummary;
 
 // Init
+applyTheme();
 updateSoundUI();
 initScope();
 initShortcuts();
+initOnboarding();
 
 // Check lockout
 if (state.clientLockoutUntil > Date.now()) updateLockoutUI();

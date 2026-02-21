@@ -52,6 +52,23 @@
   font-weight: 600;
 }
 
+/* Keyboard hints */
+.kb-hint {
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+  background: var(--surface2);
+  padding: 0.08rem 0.3rem;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+body.kb-hints-visible .kb-hint {
+  opacity: 1;
+}
+
 .step-tag {
   font-family: var(--mono);
   font-size: var(--fs-2xs);

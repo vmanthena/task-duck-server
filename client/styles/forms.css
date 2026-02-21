@@ -79,6 +79,69 @@
   color: var(--green);
 }
 
+/* Scope template select */
+.scope-template-select {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-dim);
+  cursor: pointer;
+  outline: none;
+  margin-bottom: 0.4rem;
+  display: block;
+}
+
+.scope-template-select:hover {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+/* Diff summary card */
+.diff-summary-card {
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  margin-bottom: 0.65rem;
+}
+
+.diff-summary-card h4 {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 0.35rem;
+}
+
+.ds-stats {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.ds-stat {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.ds-stat strong {
+  color: var(--text);
+}
+
+.ds-projected {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.ds-projected strong {
+  font-size: var(--fs-md);
+}
+
 .scope-list {
   display: flex;
   flex-direction: column;

@@ -84,7 +84,22 @@ export function saveToHistory(score: number, done: number, total: number, extras
   });
   if (h.length > 50) h.length = 50;
   saveHistory(h);
+  updateStreak();
   renderHistory();
+}
+
+function updateStreak(): void {
+  const today = new Date().toISOString().slice(0, 10);
+  const lastDate = localStorage.getItem(STORAGE_KEYS.lastTaskDate) || '';
+  let streak = parseInt(localStorage.getItem(STORAGE_KEYS.streak) || '0');
+  if (lastDate === today) {
+    // Already counted today
+  } else {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    streak = lastDate === yesterday ? streak + 1 : 1;
+  }
+  localStorage.setItem(STORAGE_KEYS.streak, String(streak));
+  localStorage.setItem(STORAGE_KEYS.lastTaskDate, today);
 }
 
 export function renderHistory(): void {
@@ -100,6 +115,7 @@ export function renderHistory(): void {
       <div class="hi-actions">
         <button onclick="resumeTask(${i})">Resume</button>
         <button onclick="cloneTask(${i})">Clone</button>
+        <button onclick="templateFromTask(${i})">Template</button>
         <button onclick="deleteTask(${i})">Delete</button>
       </div>
     </div>`;
@@ -154,6 +170,19 @@ export function cloneTask(idx: number): void {
   duckSay("Cloned! Rewrite your understanding fresh for this run.");
 }
 
+export function templateFromTask(idx: number): void {
+  const h = getHistory(), item = h[idx];
+  if (!item) return;
+  resetAll(true);
+  setFormData({
+    approach: item.approach || '',
+    peerWho: item.peerWho || '',
+    parkingLot: item.parkingLot || '',
+  });
+  toggleHistory();
+  duckSay("Template loaded. Fill in the rest fresh.");
+}
+
 export function deleteTask(idx: number): void {
   if (!confirm('Delete this task?')) return;
   const h = getHistory();
@@ -172,7 +201,14 @@ function renderTrend(done: HistoryItem[]): void {
   const totalExtras = recent.reduce((a, b) => a + (b.extras || 0), 0);
   const maxScore = Math.max(...recent.map(x => x.score), 1);
   const bars = recent.slice().reverse().map(x => `<div class="bar" style="height:${Math.max(4, (x.score / maxScore) * 40)}px;background:${scoreColor(x.score)}"></div>`).join('');
-  el.innerHTML = `<div class="trend-section"><h4>${ICON.trendingUp} Trends (last ${recent.length} tasks)</h4><div class="trend-row"><div class="trend-stat"><div class="ts-num ${scoreClass(avgScore)}">${avgScore}%</div><div class="ts-lbl">Avg accuracy</div></div><div class="trend-stat"><div class="ts-num color--orange">${avgTime}m</div><div class="ts-lbl">Avg time</div></div><div class="trend-stat"><div class="ts-num color--purple">${totalExtras}</div><div class="ts-lbl">Total extras</div></div></div><div class="trend-sparkline">${bars}</div></div>`;
+  const streak = parseInt(localStorage.getItem(STORAGE_KEYS.streak) || '0');
+  const last5 = done.slice(0, 5);
+  const discipline = last5.length >= 3 ? Math.round(last5.reduce((a, b) => a + b.score, 0) / last5.length) : 0;
+  let streakHtml = '';
+  if (streak > 0) streakHtml = `<div class="trend-stat"><div class="ts-num color--yellow">${streak}</div><div class="ts-lbl">Day streak</div></div>`;
+  let disciplineHtml = '';
+  if (discipline > 0) disciplineHtml = `<div class="trend-stat"><div class="ts-num ${scoreClass(discipline)}">${discipline}%</div><div class="ts-lbl">Discipline</div></div>`;
+  el.innerHTML = `<div class="trend-section"><h4>${ICON.trendingUp} Trends (last ${recent.length} tasks)</h4><div class="trend-row"><div class="trend-stat"><div class="ts-num ${scoreClass(avgScore)}">${avgScore}%</div><div class="ts-lbl">Avg accuracy</div></div><div class="trend-stat"><div class="ts-num color--orange">${avgTime}m</div><div class="ts-lbl">Avg time</div></div><div class="trend-stat"><div class="ts-num color--purple">${totalExtras}</div><div class="ts-lbl">Total extras</div></div>${streakHtml}${disciplineHtml}</div><div class="trend-sparkline">${bars}</div></div>`;
 }
 
 export function toggleHistory(): void {
@@ -185,8 +221,14 @@ export function resetAll(silent?: boolean): void {
   initScope(); updateTimeSummary();
   state.lastVerdict = null; state.verifyAttempts = 0;
   state.extras = []; state.amendments = []; state.diffItems = [];
+  state.verificationHistory = [];
+  state.totalPlannedMinutes = 0;
+  state.compareMode = false;
+  state.vrCollapsed.clear();
   $('verifyResult').className = 'verify-result';
   $('verifyResult').innerHTML = '';
+  const vh = $('verificationHistory');
+  if (vh) vh.innerHTML = '';
   $('driftOverride').classList.remove('visible');
   $('rescopeSection').classList.remove('visible');
   $('completionSection').classList.remove('visible');

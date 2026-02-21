@@ -217,6 +217,37 @@ input:-webkit-autofill {
 .score--poor { color: var(--red); }
 .color--orange { color: var(--orange); }
 .color--purple { color: var(--purple); }
+.color--yellow { color: var(--yellow); }
+
+/* Light mode overrides */
+body.light {
+  --bg: #f5f5f0;
+  --surface: #ffffff;
+  --surface2: #eeeee8;
+  --border: #d4d4cc;
+  --text: #1a1d27;
+  --text-dim: #555555;
+  --text-muted: #888888;
+  --yellow-dim: #f5c54240;
+  --yellow-glow: #f5c54255;
+  --red-dim: #e85d5d18;
+  --green-dim: #4ecb7118;
+  --blue-dim: #5b9cf518;
+  --orange-dim: #e8943d18;
+  --purple-dim: #a78bfa18;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+body.light::before {
+  background: linear-gradient(180deg, rgba(245, 245, 240, 0.6) 0%, transparent 40%);
+}
+
+body.light input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px var(--bg) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
 
 #printSheet {
   display: none;

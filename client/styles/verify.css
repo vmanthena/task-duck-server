@@ -86,6 +86,118 @@
   margin-bottom: 0.4rem;
 }
 
+/* Collapsible verification sections */
+.vr-collapsible {
+  cursor: pointer;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.vr-collapsible::before {
+  content: '\25BC';
+  position: absolute;
+  left: 0;
+  top: 0.25rem;
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.vr-collapsible.collapsed::before {
+  transform: rotate(-90deg);
+}
+
+.vr-collapsible.collapsed .vr-collapse-body {
+  display: none;
+}
+
+/* Verification history */
+#verificationHistory {
+  margin-top: 0.5rem;
+}
+
+.vh-title {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+
+.vh-entry {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.25rem;
+  cursor: pointer;
+  transition: border-color var(--ease-fast);
+}
+
+.vh-entry:hover {
+  border-color: var(--text-muted);
+}
+
+.vh-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.vh-time {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.vh-entry-body {
+  display: none;
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+
+.vh-entry.expanded .vh-entry-body {
+  display: block;
+}
+
+/* Compare mode */
+.compare-toggle {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.compare-toggle input[type="checkbox"] {
+  accent-color: var(--yellow);
+}
+
+.compare-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.compare-col {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.5rem;
+}
+
+.compare-label {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  color: var(--yellow);
+  margin-bottom: 0.3rem;
+  font-weight: 600;
+}
+
 .vr-section {
   margin-bottom: 0.35rem;
 }

@@ -9,6 +9,29 @@ export interface ScopeItem {
 
 const SCOPE_ITEM_HTML = '<input type="text" placeholder="I will do this..." oninput="checkScope()"><input type="number" placeholder="min" min="1" max="480" oninput="updateTimeSummary()"><span class="time-label">min</span><button class="remove-btn" onclick="removeScope(this)">×</button>';
 
+const SCOPE_TEMPLATES: Record<string, ScopeItem[]> = {
+  'Bug Fix': [
+    { text: 'Reproduce and document the bug', minutes: 15 },
+    { text: 'Implement the fix', minutes: 30 },
+    { text: 'Write/update tests', minutes: 20 },
+  ],
+  'Feature': [
+    { text: 'Define acceptance criteria', minutes: 15 },
+    { text: 'Implement core logic', minutes: 45 },
+    { text: 'Add UI/integration', minutes: 30 },
+    { text: 'Write tests', minutes: 20 },
+  ],
+  'Refactor': [
+    { text: 'Identify and document current behavior', minutes: 20 },
+    { text: 'Refactor code', minutes: 40 },
+    { text: 'Verify tests still pass', minutes: 15 },
+  ],
+  'Spike': [
+    { text: 'Research and prototype', minutes: 45 },
+    { text: 'Document findings and recommendation', minutes: 20 },
+  ],
+};
+
 export function addScope(): void {
   const list = $('scopeList');
   if (list.children.length >= 5) { showCreep('5 items max! If you need more, the task is too big.'); return; }
@@ -96,6 +119,29 @@ export function updateTimeSummary(): void {
 export function checkScope(): void {
   const n = getScopeItems().length;
   ($('step2Btn') as HTMLButtonElement).disabled = n < 1;
+}
+
+export function applyTemplate(name: string): void {
+  const tpl = SCOPE_TEMPLATES[name];
+  if (!tpl) return;
+  const existing = getScopeItems().filter(s => s.text);
+  if (existing.length > 0 && !confirm('Replace current scope items with template?')) return;
+  const list = $('scopeList');
+  list.innerHTML = '';
+  tpl.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'scope-item';
+    div.innerHTML = SCOPE_ITEM_HTML;
+    list.appendChild(div);
+    (div.querySelector('input[type="text"]') as HTMLInputElement).value = item.text;
+    (div.querySelector('input[type="number"]') as HTMLInputElement).value = String(item.minutes);
+  });
+  updateAddBtn();
+  updateTimeSummary();
+  checkScope();
+  scheduleSave();
+  const sel = $('scopeTemplateSelect') as HTMLSelectElement;
+  if (sel) sel.selectedIndex = 0;
 }
 
 export function initScope(): void {

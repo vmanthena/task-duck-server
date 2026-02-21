@@ -15,6 +15,15 @@ export interface DiffItem {
   idx?: number;
 }
 
+export interface VerificationHistoryEntry {
+  attempt: number;
+  verdict: string;
+  confidence: number;
+  timestamp: string;
+  summary: string;
+  fullHtml: string;
+}
+
 export const state = {
   authToken: localStorage.getItem(STORAGE_KEYS.token) ?? '',
   selectedProvider: localStorage.getItem(STORAGE_KEYS.provider) ?? '',
@@ -33,4 +42,11 @@ export const state = {
   soundEnabled: localStorage.getItem(STORAGE_KEYS.sound) === 'true',
   clientLockoutUntil: parseInt(localStorage.getItem(STORAGE_KEYS.lockout) ?? '0'),
   lockoutTimer: null as ReturnType<typeof setTimeout> | null,
+  onboarded: localStorage.getItem(STORAGE_KEYS.onboarded) === 'true',
+  verificationHistory: [] as VerificationHistoryEntry[],
+  totalPlannedMinutes: 0,
+  compareMode: false,
+  vrCollapsed: new Set<string>(),
+  theme: (localStorage.getItem(STORAGE_KEYS.theme) || 'dark') as 'dark' | 'light',
+  volume: parseInt(localStorage.getItem(STORAGE_KEYS.volume) ?? '60'),
 };

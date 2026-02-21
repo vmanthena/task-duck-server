@@ -56,3 +56,25 @@
   justify-content: center;
   flex-wrap: wrap;
 }
+
+/* Toast notification */
+.toast-copied {
+  position: fixed;
+  bottom: -3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--green);
+  color: var(--bg);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-xl);
+  z-index: 500;
+  transition: bottom 0.3s ease;
+  pointer-events: none;
+}
+
+.toast-copied.show {
+  bottom: 1.5rem;
+}

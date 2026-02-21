@@ -83,39 +83,95 @@
   color: var(--text-dim);
 }
 
-.sound-toggle,
-.history-toggle {
+/* Top navigation bar */
+.top-nav {
   position: fixed;
-  top: 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 0.35rem 0.6rem;
-  color: var(--text-dim);
-  cursor: pointer;
+  top: 0.75rem;
+  right: 0.75rem;
   z-index: 50;
-  transition: all var(--ease-fast);
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  user-select: none;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 0.2rem 0.3rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-lg);
   font-family: var(--mono);
   font-size: var(--fs-xs);
+  user-select: none;
+  transition: all var(--ease-fast);
+  position: relative;
 }
 
-.sound-toggle {
-  left: 1rem;
-}
-
-.history-toggle {
-  right: 1rem;
-}
-
-.sound-toggle:hover,
-.history-toggle:hover {
-  border-color: var(--yellow);
+.nav-btn:hover {
+  background: var(--yellow-dim);
   color: var(--yellow);
-  transform: translateY(-1px);
+}
+
+.nav-btn svg {
+  flex-shrink: 0;
+}
+
+.nav-label {
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nav-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.nav-sound-group {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-width 0.3s ease, opacity 0.3s ease;
+}
+
+.nav-sound-group:hover .volume-wrap {
+  max-width: 100px;
+  opacity: 1;
+}
+
+.volume-wrap input[type="range"] {
+  width: 55px;
+  height: 4px;
+  accent-color: var(--yellow);
+  cursor: pointer;
+}
+
+.volume-wrap span {
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+  min-width: 26px;
 }
 
 .autosave-indicator {

@@ -121,4 +121,26 @@ export function renderProviders(): void {
   };
   bar.appendChild(sel);
   ($('verifyBtn') as HTMLButtonElement).disabled = false;
+
+  // Show compare toggle if 2+ providers
+  const compareToggle = $('compareToggle');
+  if (compareToggle) {
+    compareToggle.style.display = state.availableProviders.length >= 2 ? 'inline-flex' : 'none';
+  }
+  // Build second provider select for compare mode
+  const wrap = $('compareProviderWrap');
+  if (wrap && state.availableProviders.length >= 2) {
+    const sel2 = document.createElement('select');
+    sel2.className = 'provider-select';
+    sel2.id = 'compareProviderSelect';
+    state.availableProviders.forEach((p, i) => {
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = `${p.name} ${p.cost === 'free' ? '(free)' : p.cost === 'low' ? '($)' : '($$)'}`;
+      if (i === 1) opt.selected = true;
+      sel2.appendChild(opt);
+    });
+    wrap.innerHTML = '';
+    wrap.appendChild(sel2);
+  }
 }

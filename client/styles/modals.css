@@ -209,6 +209,36 @@
   font-weight: 500;
 }
 
+/* Pace indicator */
+#paceIndicator {
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.08rem 0.3rem;
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.03em;
+}
+
+#paceIndicator:empty {
+  display: none;
+}
+
+.pace-ahead {
+  color: var(--green);
+  background: var(--green-dim);
+}
+
+.pace-on {
+  color: var(--orange);
+  background: var(--orange-dim);
+}
+
+.pace-behind {
+  color: var(--red);
+  background: var(--red-dim);
+}
+
 .wt-label {
   color: var(--text-muted);
 }
