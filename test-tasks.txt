@@ -1,0 +1,244 @@
+================================================================================
+  TASK DUCK — Test Tasks (Jira Format)
+  Purpose: Manual QA for verify & rescope endpoints with Ollama (Local) provider
+================================================================================
+
+
+--------------------------------------------------------------------------------
+TD-101  |  Type: Story  |  Priority: Medium  |  Status: To Do
+--------------------------------------------------------------------------------
+Summary:     Add CSV export to the analytics dashboard
+Description:
+  As a product manager, I want to export the analytics dashboard data as a CSV
+  file so I can share reports with stakeholders who don't have app access.
+
+Acceptance Criteria:
+  - A "Download CSV" button appears on the analytics dashboard
+  - Clicking it downloads a .csv file with all visible data columns
+  - File name includes the current date (e.g., analytics-2026-02-21.csv)
+  - Works in Chrome, Firefox, and Edge
+
+Test Rewrite (MATCH — should pass verification):
+  Add a "Download CSV" button to the analytics dashboard that exports all
+  visible columns as a .csv file named with the current date. Must work in
+  Chrome, Firefox, and Edge.
+
+Test Rewrite (DRIFT — should trigger rescope):
+  Add CSV and PDF export to the analytics dashboard. Also add a scheduled
+  email feature that sends weekly reports to stakeholders automatically.
+  Integrate with Google Sheets for live syncing.
+
+
+--------------------------------------------------------------------------------
+TD-102  |  Type: Bug  |  Priority: High  |  Status: To Do
+--------------------------------------------------------------------------------
+Summary:     Fix login timeout on slow connections
+Description:
+  Users on slow 3G connections report that the login form times out after 5
+  seconds and shows "Connection error" even though the server is reachable.
+  The bcrypt hashing step takes ~8s on low-end devices.
+
+Acceptance Criteria:
+  - Increase client-side timeout to 30 seconds
+  - Show a progress indicator during the hashing step
+  - Display a meaningful error message if timeout is actually reached
+
+Test Rewrite (MATCH — should pass verification):
+  Increase the login fetch timeout from 5s to 30s. Add a spinner/progress
+  message during the bcrypt hashing phase. If the 30s timeout is reached,
+  show "Login is taking longer than expected — check your connection."
+
+Test Rewrite (DRIFT — should trigger rescope):
+  Rewrite the entire authentication system to use WebAuthn/passkeys instead
+  of bcrypt. Remove password-based login entirely. Add biometric support for
+  mobile devices.
+
+
+--------------------------------------------------------------------------------
+TD-103  |  Type: Story  |  Priority: Low  |  Status: To Do
+--------------------------------------------------------------------------------
+Summary:     Add dark mode toggle to settings
+Description:
+  Users have requested a dark mode option. Add a toggle in the settings panel
+  that switches between light and dark themes. Persist the preference in
+  localStorage.
+
+Acceptance Criteria:
+  - Toggle switch in settings panel
+  - Switches CSS variables for background, text, and border colors
+  - Preference saved in localStorage and restored on page load
+  - Default follows system preference (prefers-color-scheme)
+
+Test Rewrite (MATCH — should pass verification):
+  Add a dark mode toggle in settings. Use CSS variables to swap light/dark
+  themes. Save preference to localStorage, default to OS preference via
+  prefers-color-scheme media query.
+
+Test Rewrite (DRIFT — should trigger rescope):
+  Implement a full theming engine with 8 custom color palettes. Add a color
+  picker for users to create their own themes. Sync theme preferences across
+  devices via a cloud backend.
+
+
+--------------------------------------------------------------------------------
+TD-104  |  Type: Bug  |  Priority: Critical  |  Status: To Do
+--------------------------------------------------------------------------------
+Summary:     API rate limiter locks out legitimate users after page refresh
+Description:
+  The rate limiter tracks failed login attempts by IP. However, a hard page
+  refresh during the bcrypt hashing phase causes the request to abort, which
+  the server counts as a failed attempt. Users who refresh 3 times get locked
+  out for 20 minutes.
+
+Acceptance Criteria:
+  - Aborted/cancelled requests are NOT counted as failed attempts
+  - Only completed requests with wrong credentials count as failures
+  - Existing lockout duration (20 min) and threshold (3 attempts) unchanged
+
+Test Rewrite (MATCH — should pass verification):
+  Fix the rate limiter to distinguish between aborted requests and actual
+  failed login attempts. Only increment the failure counter when the server
+  fully processes a login request and the credentials are wrong. Do not
+  change the 3-attempt threshold or 20-minute lockout window.
+
+Test Rewrite (DRIFT — should trigger rescope):
+  Replace the IP-based rate limiter with a CAPTCHA system. Add Google
+  reCAPTCHA v3 to the login page. Remove the IP lockout mechanism entirely
+  and add a "forgot password" email flow.
+
+
+--------------------------------------------------------------------------------
+TD-105  |  Type: Story  |  Priority: Medium  |  Status: To Do
+--------------------------------------------------------------------------------
+Summary:     Add keyboard shortcut help modal
+Description:
+  The app has keyboard shortcuts but no discoverability. Add a help modal
+  that opens with "?" key showing all available shortcuts in a formatted
+  table.
+
+Acceptance Criteria:
+  - Pressing "?" opens a modal overlay
+  - Modal lists all shortcuts grouped by category (navigation, actions, etc.)
+  - Pressing Escape or clicking outside closes the modal
+  - Modal is accessible (focus trap, aria labels)
+
+Test Rewrite (MATCH — should pass verification):
+  Add a keyboard shortcut help modal triggered by the "?" key. Display all
+  shortcuts in a grouped table. Close with Escape or outside click. Include
+  focus trapping and ARIA labels for accessibility.
+
+Test Rewrite (DRIFT — should trigger rescope):
+  Build a full interactive tutorial/onboarding system with step-by-step
+  guided walkthroughs. Add tooltip-based hints that highlight UI elements.
+  Track which tutorials the user has completed in a database.
+
+
+--------------------------------------------------------------------------------
+TD-106  |  Type: Story  |  Priority: High  |  Status: To Do
+--------------------------------------------------------------------------------
+Summary:     Add request body size validation to all API endpoints
+Description:
+  Currently only the sanitizer middleware enforces a 10KB limit. We need
+  explicit validation on each endpoint to return clear 413 errors with
+  field-specific messages (e.g., "original field exceeds 5000 characters").
+
+Acceptance Criteria:
+  - Each POST endpoint validates individual field lengths
+  - /api/verify: original max 5000 chars, rewrite max 5000 chars
+  - /api/rescope: original max 5000 chars, rewrite max 5000 chars
+  - Return 413 with { error: "<field> exceeds <limit> characters" }
+  - Global 10KB sanitizer limit remains as a fallback
+
+Test Rewrite (MATCH — should pass verification):
+  Add per-field character length validation to /api/verify and /api/rescope
+  endpoints. Original and rewrite fields capped at 5000 chars each. Return
+  413 status with a message identifying which field is too long. Keep the
+  existing 10KB sanitizer middleware as a catch-all.
+
+Test Rewrite (DRIFT — should trigger rescope):
+  Add field validation to all endpoints. Also implement request signing with
+  HMAC-SHA256 to prevent tampering, add request logging to a PostgreSQL
+  database, and set up Datadog APM tracing for all API calls.
+
+
+--------------------------------------------------------------------------------
+TD-107  |  Type: Bug  |  Priority: Medium  |  Status: To Do
+--------------------------------------------------------------------------------
+Summary:     Checkpoint modal appears during idle time
+Description:
+  The 30-minute checkpoint modal fires based on wall-clock time, not active
+  work time. If a user leaves the tab open during lunch, they return to
+  multiple stacked checkpoint modals.
+
+Acceptance Criteria:
+  - Checkpoint timer only counts when the tab is visible (Page Visibility API)
+  - Timer pauses when tab is hidden, resumes when visible
+  - Only one modal can be shown at a time (no stacking)
+  - Reset timer after each checkpoint interaction (Yes or No)
+
+Test Rewrite (MATCH — should pass verification):
+  Use the Page Visibility API to pause the checkpoint timer when the tab is
+  hidden and resume when visible. Prevent multiple modals from stacking by
+  checking if one is already displayed. Reset the 30-minute timer after
+  each checkpoint response.
+
+Test Rewrite (DRIFT — should trigger rescope):
+  Replace the checkpoint modal with a Slack integration that sends periodic
+  reminders. Add an AI-powered "focus score" that analyzes typing patterns
+  to determine if the user is actively working. Build a dashboard showing
+  historical focus metrics.
+
+
+--------------------------------------------------------------------------------
+TD-108  |  Type: Story  |  Priority: Low  |  Status: To Do
+--------------------------------------------------------------------------------
+Summary:     Add Markdown preview to the rewrite textarea
+Description:
+  The rewrite textarea currently shows raw text. Add a live Markdown preview
+  panel next to it so users can format their rewrites with headers, lists,
+  and bold/italic text.
+
+Acceptance Criteria:
+  - Split view: textarea on left, rendered preview on right
+  - Preview updates on each keystroke (debounced 300ms)
+  - Supports: headers (h1-h3), bold, italic, bullet lists, numbered lists
+  - No external dependencies — use a minimal inline parser
+  - Toggle button to show/hide the preview panel
+
+Test Rewrite (MATCH — should pass verification):
+  Add a split-pane Markdown preview beside the rewrite textarea. Render
+  preview on keystroke with 300ms debounce. Support h1-h3, bold, italic,
+  and lists. Use a minimal inline parser (no external deps). Include a
+  toggle to show/hide the preview.
+
+Test Rewrite (DRIFT — should trigger rescope):
+  Integrate a full WYSIWYG rich text editor (ProseMirror or TipTap) with
+  toolbar buttons for formatting. Add image upload/drag-and-drop support
+  with cloud storage. Include a version history feature that tracks every
+  edit with undo/redo spanning across sessions.
+
+
+================================================================================
+  USAGE NOTES
+================================================================================
+
+  Each task has two test rewrites:
+    1. MATCH rewrite  — Stays in scope. Verify endpoint should return
+       verdict: "match" with high confidence.
+    2. DRIFT rewrite  — Adds features not in the original. Verify endpoint
+       should return verdict: "drift" or "major_mismatch", and the rescope
+       endpoint should strip the extras and return a corrected rewrite.
+
+  To test with curl (example for TD-101 MATCH):
+
+    curl -X POST http://localhost:8080/api/verify \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer <token>" \
+      -d '{
+        "provider": "ollama",
+        "original": "Add a Download CSV button to the analytics dashboard that exports visible data as a .csv file with date in the filename. Must work in Chrome, Firefox, and Edge.",
+        "rewrite": "Add a Download CSV button to the analytics dashboard that exports all visible columns as a .csv file named with the current date. Must work in Chrome, Firefox, and Edge.",
+        "definitionOfDone": "CSV button visible, downloads correct file, works cross-browser."
+      }'
+
+================================================================================

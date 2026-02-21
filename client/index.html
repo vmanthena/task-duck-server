@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Duck v4 — Stay in Scope</title>
+<link rel="stylesheet" href="./main.css">
+</head>
+<body>
+<!-- LOGIN -->
+<div class="login-overlay" id="loginOverlay"><div class="login-box"><div class="login-duck">🦆</div><h2>Task Duck v4</h2><p class="login-sub">Enter your password to continue</p><div class="pw-input-wrapper"><input type="password" id="loginPassword" placeholder="Password..." autofocus autocomplete="new-password" data-lpignore="true" data-1p-ignore data-form-type="other" onkeydown="if(event.key==='Enter')doLogin()"><button type="button" class="pw-toggle" onclick="togglePasswordVis()"><svg id="pwEyeShow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg id="pwEyeHide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div><div class="login-error" id="loginError"></div><div class="login-lockout" id="loginLockout"></div><button class="btn btn-primary btn--full" onclick="doLogin()" id="loginBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg> Unlock</button><div class="login-attempts" id="loginAttempts"></div></div></div>
+
+<!-- FIXED UI -->
+<button class="sound-toggle" onclick="toggleSound()"><span id="soundIcon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg></span><span id="soundLabel">SOUND OFF</span></button>
+<button class="history-toggle" onclick="toggleHistory()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> History</button>
+<div class="work-timer" id="workTimer"><span id="workTimerIcon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><span class="wt-time" id="workTimerDisplay">00:00</span><span class="wt-label">working</span><button class="wt-btn" onclick="toggleWorkTimer()" id="workTimerBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></button></div>
+<div class="autosave-indicator" id="autosaveInd"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Draft saved</div>
+<div class="overlay" id="overlay" onclick="toggleHistory()"></div>
+
+<!-- HISTORY PANEL -->
+<div class="history-panel" id="historyPanel"><div class="history-panel-header"><h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Task History</h3><button onclick="toggleHistory()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div id="trendDashboard"></div><div class="history-list" id="historyList"><div class="history-empty">No tasks yet.</div></div></div>
+
+<!-- CHECKPOINT -->
+<div class="checkpoint-overlay" id="checkpointOverlay"><div class="checkpoint-modal"><div class="checkpoint-duck">🦆</div><h3>Checkpoint! Still inside the fence?</h3><p id="checkpointMsg">Which scope item are you working on RIGHT NOW?</p><div class="cm-scope"><ul id="checkpointScope"></ul></div><div class="cm-actions"><button class="btn btn-primary btn-sm" onclick="checkpointYes()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> On track</button><button class="btn btn-danger btn-sm" onclick="checkpointNo()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> I drifted</button></div></div></div>
+
+<!-- MARKDOWN -->
+<div class="md-overlay" id="mdOverlay"><div class="md-modal"><h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Markdown Export</h3><textarea id="mdContent" readonly></textarea><div class="md-actions"><button class="btn btn-ghost btn-sm" onclick="closeMd()">Close</button><button class="btn btn-primary btn-sm" onclick="copyMd()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div></div></div>
+
+<!-- CREEP ALERT -->
+<div class="creep-alert" id="creepAlert"><div class="duck-mini">🦆</div><p id="creepMessage">Quack!</p><button class="dismiss" onclick="hideCreep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+
+<!-- PRINT SHEET -->
+<div id="printSheet"></div>
+
+<!-- MAIN APP -->
+<div class="app">
+  <div class="header">
+    <div class="duck-avatar" id="duck" onclick="quackDuck()">🦆</div>
+    <div class="header-center"><h1>Task <span class="y">Duck</span> <span class="v">v4</span></h1><p>READ &rarr; PLAN &rarr; EXECUTE &rarr; CHECK</p></div>
+    <div class="duck-speech"><div class="label">Duck says</div><p id="duckMessage">Paste a task below. I'll keep you honest — no scope creep on my watch.</p></div>
+  </div>
+
+  <div id="stepsContainer">
+    <!-- STEP 1: READ & REWRITE -->
+    <div class="step active" id="step1">
+      <div class="step-header" onclick="reopenStep(1)"><div class="step-number"><span>1</span></div><div class="step-title">Read & Rewrite</div><div class="step-tag step-tag--understand">understand</div></div>
+      <div class="step-body">
+        <div class="field-row field-row-3 field-row--spaced"><div class="field field--flush"><label>Task ID</label><input type="text" id="taskIdField" placeholder="JIRA-1234..." autocomplete="off" spellcheck="false"></div><div class="field field--flush"><label>Title</label><input type="text" id="taskTitleField" placeholder="Short title..." autocomplete="off"></div><div class="field field--flush"><label>Story Points</label><input type="number" id="storyPointsField" placeholder="SP" min="0" max="100" oninput="updateTimeSummary()"></div></div>
+        <div class="compare-zone"><div class="field field--flush"><label>Raw Task <span class="badge badge-original">original</span></label><textarea class="tall" id="rawTaskField" placeholder="Paste the original ticket verbatim..."></textarea></div><div class="field field--flush"><label>Your Understanding <span class="badge badge-yours">rewrite</span></label><textarea class="tall" id="askField" placeholder="Rewrite: what is ACTUALLY being asked?"></textarea></div></div>
+        <div class="field"><label>Deliverable</label><textarea class="short" id="deliverableField" placeholder="A PR? Config change? Document?"></textarea></div>
+        <div class="field"><label><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Definition of Done</label><textarea class="short" id="dodField" placeholder="How do I know I'm finished? Be specific."></textarea></div>
+        <div class="field"><label><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> What is NOT being asked?</label><textarea class="short" id="notAskedField" placeholder="Explicitly state what's out of scope..."></textarea></div>
+        <div class="step-actions"><div class="provider-bar" id="providerBar"><span class="provider-label">AI:</span></div><button class="btn btn-ghost btn-sm" onclick="verifyUnderstanding()" id="verifyBtn" disabled><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Verify</button><button class="btn btn-primary" onclick="completeStep(1)" id="step1Btn">Continue <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button></div>
+        <div class="verify-loading" id="verifyLoading"><div class="spinner"></div><span>Masking & verifying...</span></div>
+        <div class="verify-result" id="verifyResult"></div>
+        <div class="drift-override" id="driftOverride">
+          <div class="drift-rescope-group">
+            <div class="field"><label>Justification for scope change (required)</label><textarea id="rescopeJustification" class="short" placeholder="Explain WHY the scope needs to change — new requirements, blockers, dependencies..."></textarea></div>
+            <button class="btn btn-primary btn-sm drift-action-btn" onclick="requestRescope()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Re-evaluate</button>
+          </div>
+          <div class="drift-divider"><span>or proceed without fixing</span></div>
+          <div class="drift-proceed-group">
+            <input type="text" id="driftReason" placeholder="Why I'm ignoring drift..." class="input-inline">
+          </div>
+        </div>
+        <div class="rescope-loading" id="rescopeLoading"><div class="spinner"></div><span>Re-scoping...</span></div>
+        <div class="rescope-section" id="rescopeSection">
+          <div class="rescope-header"><span>🦆 Re-evaluated Scope</span><button class="dismiss" onclick="hideRescope()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+          <div class="rescope-changes" id="rescopeChanges"></div>
+          <div class="rescope-field"><label>Suggested Rewrite</label><div class="rescope-readonly" id="rescopeRewriteDisplay"></div><button class="btn btn-ghost btn-sm rescope-copy" onclick="copyRescopeField('rewrite')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div>
+          <div class="rescope-field"><label>Suggested Definition of Done</label><div class="rescope-readonly" id="rescopeDodDisplay"></div><button class="btn btn-ghost btn-sm rescope-copy" onclick="copyRescopeField('dod')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button></div>
+          <div class="rescope-field rescope-points-field" id="rescopePointsField" style="display:none"><label>Suggested Story Points</label><div class="rescope-points" id="rescopePointsDisplay"></div></div>
+          <div class="rescope-duck" id="rescopeDuck"></div>
+        </div>
+      </div>
+    </div>
+    <div class="step-connector"></div>
+
+    <!-- STEP 2: PLAN & FENCE -->
+    <div class="step" id="step2">
+      <div class="step-header" onclick="reopenStep(2)"><div class="step-number"><span>2</span></div><div class="step-title">Plan & Fence</div><div class="step-tag step-tag--constrain">constrain</div></div>
+      <div class="step-body">
+        <div class="field"><label>Scope Items (3–5) — estimate minutes</label>
+          <div class="scope-list" id="scopeList"></div>
+          <button class="add-scope-btn" onclick="addScope()" id="addScopeBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add item</button>
+          <div class="time-summary" id="timeSummary"><span class="ts-label">Total:</span><span class="ts-value" id="totalTime">0 min</span></div>
+          <div class="sp-fit" id="spFit" style="display:none"></div>
+        </div>
+        <div class="field"><label><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Approach — files/services I will touch</label><textarea id="approachField" placeholder="List specific files, services, configs you plan to modify..."></textarea></div>
+        <div class="peer-section"><div class="field"><label><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Who reviews this?</label><textarea class="short" id="peerWho" placeholder="Name/team..."></textarea></div><div class="field"><label>What would SURPRISE them in your diff?</label><textarea class="short" id="peerSurprise" placeholder="Think from reviewer's perspective..."></textarea></div></div>
+        <div class="field"><label>Parking Lot</label><textarea id="parkingLot" placeholder="'While I'm in here...' ideas go HERE, not in your PR."></textarea></div>
+        <div class="step-actions"><button class="btn btn-ghost" onclick="goBack(1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Back</button><button class="btn btn-ghost" onclick="printPlan()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print</button><button class="btn btn-primary" onclick="completeStep(2)" id="step2Btn">Start working <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button></div>
+      </div>
+    </div>
+    <div class="step-connector"></div>
+
+    <!-- STEP 3: EXECUTE -->
+    <div class="step" id="step3">
+      <div class="step-header" onclick="reopenStep(3)"><div class="step-number"><span>3</span></div><div class="step-title">Execute</div><div class="step-tag step-tag--work">do the work</div></div>
+      <div class="step-body">
+        <div class="diff-section"><h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg> Diff Tracker — Planned vs Actual</h4><div id="diffList"></div>
+          <div class="diff-add-extra"><input type="text" id="extraWorkInput" placeholder="Unplanned extra work..."><button class="btn btn-ghost btn-sm" onclick="addExtra()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Extra</button></div>
+          <div class="amend-section" id="amendSection" style="display:none"><div class="field"><label><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Scope Amendment — what and WHY?</label><textarea class="short" id="amendReason" placeholder="I need to add this because the original task is blocked without it..."></textarea></div><button class="btn btn-ghost btn-sm" onclick="submitAmendment()">Submit Amendment</button></div>
+          <button class="btn btn-ghost btn-sm btn-outline-blue" onclick="showAmendment()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Scope Amendment</button>
+        </div>
+        <div class="step-actions"><button class="btn btn-ghost" onclick="pauseAndGoBack(2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Review plan</button><button class="btn btn-primary" onclick="completeStep(3)" id="step3Btn">Done working <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button></div>
+      </div>
+    </div>
+    <div class="step-connector"></div>
+
+    <!-- STEP 4: PRE-PUSH CHECK -->
+    <div class="step" id="step4">
+      <div class="step-header" onclick="reopenStep(4)"><div class="step-number"><span>4</span></div><div class="step-title">Pre-Push Check</div><div class="step-tag step-tag--verify">verify</div></div>
+      <div class="step-body">
+        <div id="checkQuestions"></div>
+        <div class="step-actions"><button class="btn btn-ghost" onclick="goBack(3)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Back</button><button class="btn btn-primary" onclick="shipIt()" id="shipBtn" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Ship it</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPLETION -->
+  <div class="completion" id="completionSection">
+    <div class="big-duck">🦆</div>
+    <h2>Shipped!</h2>
+    <div class="accuracy-card"><span class="acc-label">Accuracy</span><span class="acc-score" id="accScore">0%</span><span class="acc-detail" id="accDetail"></span></div>
+    <p id="completionDuck"></p>
+    <div class="completion-actions">
+      <button class="btn btn-ghost" onclick="printFinal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print</button>
+      <button class="btn btn-ghost" onclick="exportMarkdown()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Export</button>
+      <button class="btn btn-primary" onclick="resetAll()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New Task</button>
+    </div>
+  </div>
+</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

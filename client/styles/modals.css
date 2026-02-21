@@ -1,0 +1,242 @@
+.checkpoint-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--ease-base);
+}
+
+.checkpoint-overlay.show {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.checkpoint-modal {
+  background: var(--surface);
+  border: 2px solid var(--yellow);
+  border-radius: 18px;
+  padding: 2rem;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 0 40px var(--yellow-glow);
+}
+
+.checkpoint-duck {
+  font-size: 3rem;
+}
+
+.checkpoint-modal h3 {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+  color: var(--yellow);
+}
+
+.checkpoint-modal p {
+  font-size: var(--fs-md);
+  color: var(--text-dim);
+  margin-bottom: 1rem;
+}
+
+.checkpoint-modal .cm-scope {
+  text-align: left;
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  padding: 0.65rem;
+  margin-bottom: 1rem;
+  font-size: var(--fs-base);
+}
+
+.checkpoint-modal .cm-scope li {
+  margin-bottom: 0.25rem;
+  list-style: none;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--radius-sm);
+}
+
+.checkpoint-modal .cm-scope li:hover {
+  background: var(--yellow-dim);
+}
+
+.checkpoint-modal .cm-scope li.selected {
+  background: var(--yellow-dim);
+  color: var(--yellow);
+}
+
+.checkpoint-modal .cm-scope li::before {
+  content: '→ ';
+  color: var(--yellow);
+}
+
+.checkpoint-modal .cm-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.md-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--ease-base);
+}
+
+.md-overlay.show {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.md-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.md-modal h3 {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.md-modal textarea {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem;
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  resize: none;
+  min-height: 300px;
+  outline: none;
+}
+
+.md-modal .md-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  justify-content: flex-end;
+}
+
+.creep-alert {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--red);
+  border-radius: 14px;
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  transform: translateY(120%);
+  transition: transform var(--ease-spring);
+  max-width: 320px;
+}
+
+.creep-alert.show {
+  transform: translateY(0);
+}
+
+.creep-alert .duck-mini {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.creep-alert p {
+  font-size: var(--fs-base);
+  line-height: 1.4;
+}
+
+.creep-alert .dismiss {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.55rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.work-timer {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 0.35rem 0.85rem;
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  z-index: 50;
+  display: none;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.work-timer.active {
+  display: flex;
+}
+
+.wt-time {
+  color: var(--orange);
+  font-weight: 500;
+}
+
+.wt-label {
+  color: var(--text-muted);
+}
+
+.wt-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 0.2rem;
+}
+
+.wt-btn:hover {
+  color: var(--yellow);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 150;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--ease-base);
+}
+
+.overlay.show {
+  opacity: 1;
+  pointer-events: all;
+}

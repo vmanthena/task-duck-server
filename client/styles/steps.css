@@ -1,0 +1,118 @@
+.step {
+  animation: fadeUp 0.5s ease both;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  padding: var(--sp-6) 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.step-number {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  border: 2px solid var(--border);
+  color: var(--text-dim);
+  flex-shrink: 0;
+  transition: all var(--ease-base);
+}
+
+.step.active .step-number {
+  border-color: var(--yellow);
+  color: var(--yellow);
+  box-shadow: 0 0 10px var(--yellow-dim);
+}
+
+.step.completed .step-number {
+  border-color: var(--green);
+  background: var(--green);
+  color: var(--bg);
+}
+
+.step.completed .step-number::after {
+  content: '\2713';
+}
+
+.step.completed .step-number span {
+  display: none;
+}
+
+.step-title {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.step-tag {
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.12rem 0.4rem;
+  border-radius: var(--radius-sm);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.step-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height var(--ease-spring), opacity var(--ease-base);
+  opacity: 0;
+  padding-left: 0;
+}
+
+.step.active .step-body,
+.step.reopened .step-body {
+  max-height: 5000px;
+  opacity: 1;
+}
+
+.step-connector {
+  width: 2px;
+  height: 8px;
+  background: var(--border);
+  margin-left: 15px;
+  transition: background var(--ease-base);
+}
+
+.step.completed + .step-connector {
+  background: var(--green);
+}
+
+.step-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  margin-top: var(--sp-5);
+  margin-bottom: var(--sp-6);
+  flex-wrap: wrap;
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  padding: var(--sp-5) 0;
+  border-top: 1px solid var(--border);
+  z-index: 10;
+  justify-content: flex-end;
+}
+
+.step-actions .btn-ghost {
+  margin-right: auto;
+}
+
+.step-actions .btn-ghost ~ .btn-ghost {
+  margin-right: 0;
+}
+
+.step-actions .provider-bar {
+  margin-right: auto;
+}

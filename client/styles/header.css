@@ -1,0 +1,135 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  animation: fadeDown 0.6s ease;
+}
+
+.header .duck-avatar {
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  background: var(--yellow-dim);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  cursor: pointer;
+  transition: transform var(--ease-base), box-shadow var(--ease-base);
+  user-select: none;
+}
+
+.header .duck-avatar:hover {
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: 0 0 16px var(--yellow-glow);
+}
+
+.header .duck-avatar.quack {
+  animation: quack 0.4s ease;
+}
+
+.header .header-center {
+  flex: 0 0 auto;
+}
+
+.header .header-center h1 {
+  font-size: var(--fs-3xl);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.header .header-center h1 span.y {
+  color: var(--yellow);
+}
+
+.header .header-center h1 span.v {
+  font-size: 0.5em;
+  color: var(--text-muted);
+}
+
+.header .header-center p {
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  font-weight: 300;
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.header .duck-speech {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
+.header .duck-speech .label {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--yellow);
+  margin-bottom: 0.15rem;
+}
+
+.header .duck-speech p {
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+
+.sound-toggle,
+.history-toggle {
+  position: fixed;
+  top: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.35rem 0.6rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  z-index: 50;
+  transition: all var(--ease-fast);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  user-select: none;
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+}
+
+.sound-toggle {
+  left: 1rem;
+}
+
+.history-toggle {
+  right: 1rem;
+}
+
+.sound-toggle:hover,
+.history-toggle:hover {
+  border-color: var(--yellow);
+  color: var(--yellow);
+  transform: translateY(-1px);
+}
+
+.autosave-indicator {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  z-index: 50;
+  opacity: 0;
+  transition: opacity var(--ease-base);
+}
+
+.autosave-indicator.show {
+  opacity: 1;
+}
