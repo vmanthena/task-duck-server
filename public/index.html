@@ -76,7 +76,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .add-scope-btn:hover{border-color:var(--yellow);color:var(--yellow)}
 .time-summary{display:flex;align-items:center;gap:.75rem;margin-top:.6rem;padding:.6rem .85rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:.78rem}
 .ts-label{color:var(--text-dim)}.ts-value{color:var(--orange);font-weight:500}.ts-warn{color:var(--red)}.ts-ok{color:var(--green)}
-.btn{display:inline-flex;align-items:center;gap:.45rem;padding:.6rem 1.2rem;border-radius:10px;font-family:var(--sans);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;border:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;padding:.6rem 1.2rem;border-radius:10px;font-family:var(--sans);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;border:none;text-align:center}
 .btn-primary{background:var(--yellow);color:var(--bg)}.btn-primary:hover{box-shadow:0 0 20px var(--yellow-glow);transform:translateY(-1px)}.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
 .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-dim)}.btn-ghost:hover{border-color:var(--text-dim);color:var(--text)}
 .btn-sm{padding:.4rem .8rem;font-size:.78rem;border-radius:8px}
@@ -106,6 +106,21 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .drift-override{margin-top:.65rem;padding:.65rem;background:var(--orange-dim);border:1px solid var(--orange);border-radius:10px;display:none}
 .drift-override.visible{display:block}
 .drift-override label{color:var(--orange)!important}
+.rescope-loading{display:none;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.78rem;color:var(--blue);margin-top:.5rem}
+.rescope-loading.active{display:flex}
+.rescope-section{display:none;margin-top:.65rem;padding:.85rem;background:var(--blue-dim);border:1px solid var(--blue);border-radius:12px}
+.rescope-section.visible{display:block}
+.rescope-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;font-family:var(--mono);font-size:.75rem;font-weight:600;color:var(--blue)}
+.rescope-header .dismiss{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:.85rem}
+.rescope-changes{margin-bottom:.6rem;font-size:.78rem;line-height:1.5}
+.rescope-changes li{margin-bottom:.2rem;color:var(--text-dim);list-style:none;padding-left:.8rem;position:relative}
+.rescope-changes li::before{content:'→';position:absolute;left:0;color:var(--blue)}
+.rescope-field{margin-bottom:.5rem}
+.rescope-field label{display:block;font-family:var(--mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:.25rem}
+.rescope-field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;color:var(--text);font-family:var(--sans);font-size:.85rem;line-height:1.5;resize:vertical;outline:none;min-height:60px}
+.rescope-apply{margin-top:.25rem;border-color:var(--blue)!important;color:var(--blue)!important}
+.rescope-apply:hover{background:var(--blue-dim)!important}
+.rescope-duck{font-style:italic;font-size:.8rem;color:var(--blue);margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border)}
 .check-q{display:flex;align-items:flex-start;gap:.7rem;padding:.75rem .9rem;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;user-select:none;margin-bottom:.5rem}
 .check-q:hover{border-color:var(--text-muted)}.check-q.checked{border-color:var(--green);background:var(--green-dim)}
 .check-q .checkbox{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;margin-top:1px}
@@ -191,7 +206,7 @@ input:-webkit-autofill{-webkit-box-shadow:0 0 0 30px var(--bg) inset!important;-
 </head>
 <body>
 <!-- LOGIN -->
-<div class="login-overlay" id="loginOverlay"><div class="login-box"><div class="login-duck">🦆</div><h2>Task Duck v4</h2><p class="login-sub">Enter your password to continue</p><div style="position:relative"><input type="password" id="loginPassword" placeholder="Password..." autofocus autocomplete="off" data-lpignore="true" data-1p-ignore onkeydown="if(event.key==='Enter')doLogin()"><button type="button" class="pw-toggle" onclick="togglePasswordVis()"><svg id="pwEyeShow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg id="pwEyeHide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div><div class="login-error" id="loginError"></div><div class="login-lockout" id="loginLockout"></div><button class="btn btn-primary" style="width:100%" onclick="doLogin()" id="loginBtn">🔓 Unlock</button><div class="login-attempts" id="loginAttempts"></div></div></div>
+<div class="login-overlay" id="loginOverlay"><div class="login-box"><div class="login-duck">🦆</div><h2>Task Duck v4</h2><p class="login-sub">Enter your password to continue</p><div style="position:relative"><input type="password" id="loginPassword" placeholder="Password..." autofocus autocomplete="new-password" data-lpignore="true" data-1p-ignore data-form-type="other" onkeydown="if(event.key==='Enter')doLogin()"><button type="button" class="pw-toggle" onclick="togglePasswordVis()"><svg id="pwEyeShow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg id="pwEyeHide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div><div class="login-error" id="loginError"></div><div class="login-lockout" id="loginLockout"></div><button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()" id="loginBtn">🔓 Unlock</button><div class="login-attempts" id="loginAttempts"></div></div></div>
 
 <!-- FIXED UI -->
 <button class="sound-toggle" onclick="toggleSound()"><span id="soundIcon">🔇</span><span id="soundLabel">SOUND OFF</span></button>
@@ -234,7 +249,15 @@ input:-webkit-autofill{-webkit-box-shadow:0 0 0 30px var(--bg) inset!important;-
         <div class="step-actions"><div class="provider-bar" id="providerBar"><span style="font-family:var(--mono);font-size:.65rem;color:var(--text-muted);padding:.3rem 0">AI:</span></div><button class="btn btn-ghost btn-sm" onclick="verifyUnderstanding()" id="verifyBtn" disabled>🦆 Verify</button><button class="btn btn-primary" onclick="completeStep(1)" id="step1Btn">Lock it in →</button></div>
         <div class="verify-loading" id="verifyLoading"><div class="spinner"></div><span>Masking & verifying...</span></div>
         <div class="verify-result" id="verifyResult"></div>
-        <div class="drift-override" id="driftOverride"><div class="field" style="margin:0"><label>⚠ Proceeding despite drift — why?</label><textarea class="short" id="driftReason" placeholder="I understand the drift. Proceeding because..."></textarea></div></div>
+        <div class="drift-override" id="driftOverride"><div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" style="border-color:var(--blue);color:var(--blue)" onclick="requestRescope()">🦆 Fix my scope</button><span style="font-family:var(--mono);font-size:.6rem;color:var(--text-muted)">or proceed:</span><input type="text" id="driftReason" placeholder="Why I'm ignoring drift..." style="flex:1;min-width:140px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.4rem .6rem;color:var(--text);font-size:.8rem;outline:none"></div></div>
+        <div class="rescope-loading" id="rescopeLoading"><div class="spinner"></div><span>Re-scoping...</span></div>
+        <div class="rescope-section" id="rescopeSection">
+          <div class="rescope-header"><span>🦆 Suggested Re-scope</span><button class="dismiss" onclick="hideRescope()">✕</button></div>
+          <div class="rescope-changes" id="rescopeChanges"></div>
+          <div class="rescope-field"><label>Suggested Rewrite</label><textarea id="rescopeRewrite" readonly></textarea><button class="btn btn-ghost btn-sm rescope-apply" onclick="applyRescope('rewrite')">↑ Apply to my rewrite</button></div>
+          <div class="rescope-field"><label>Suggested Definition of Done</label><textarea id="rescopeDod" readonly class="short"></textarea><button class="btn btn-ghost btn-sm rescope-apply" onclick="applyRescope('dod')">↑ Apply to my DoD</button></div>
+          <div class="rescope-duck" id="rescopeDuck"></div>
+        </div>
       </div>
     </div>
     <div class="step-connector"></div>
@@ -317,138 +340,35 @@ let soundEnabled = localStorage.getItem('tdSound') === 'true';
 let bcryptLoaded = false;
 let clientLockoutUntil = parseInt(localStorage.getItem('tdLockout') || '0');
 
-const moreDuckQuotes = [
-  "If you can't explain the change in one sentence, it's too big.",
-  "That TODO comment isn't a plan. It's a prayer.",
-  "Refactoring is not a feature. Don't sneak it in.",
-  "The diff should tell a story. Yours reads like a fever dream.",
-  "Stop gold-plating. The ticket said bronze.",
-  "Your future self will not remember why you did that. Comment it.",
-  "Clever code is tech debt with a bow on it.",
-  "If the tests pass and you don't know why, the tests are wrong.",
-  "Don't fix what isn't broken. Don't touch what isn't scoped.",
-  "A 2,000-line PR is not a PR. It's a hostage situation.",
-  "The sprint board is not a suggestion board.",
-  "Merge conflicts are nature's way of saying you waited too long.",
-  "Did you actually read the error message, or just panic?",
-  "The duck sees you copying from Stack Overflow without reading it.",
-  "If your commit message says 'misc fixes,' the duck is judging you.",
-  "Write the test first. Or at least write the test.",
-  "Production is not a testing environment. The duck has spoken.",
-  "One PR, one purpose. This is not a yard sale.",
-  "That abstraction you're building? Nobody asked for it.",
-  "Logs are not optional. They're the black box on your airplane.",
-  "If you need a meeting to explain your PR, rewrite your PR.",
-  "The requirements changed? Cool. So should your branch.",
-  "Delete the dead code. It's not a museum.",
-  "You're not simplifying. You're just moving complexity somewhere else.",
-  "Ask the question now. Not after you've built the wrong thing for three days.",
-  "A hotfix is not an architecture decision.",
-  "If it works but you can't deploy it, it doesn't work.",
-  "Your local environment is not production. Stop pretending.",
-  "The duck doesn't care about your ego. The duck cares about the ticket.",
-  "Configuration belongs in config files, not in your head.",
-  "If the pipeline is red, nothing else matters.",
-  "Magic numbers are only magic to the person who wrote them.",
-  "That regex you're proud of? Nobody else can read it.",
-  "Hardcoded values are just bugs waiting for a schedule.",
-  "You didn't test the edge case. The duck knows.",
-  "Naming things is hard. Naming things poorly is expensive.",
-  "Don't optimize before you measure. Don't measure before you ship.",
-  "The database is not your junk drawer.",
-  "Your API contract is a promise. Stop breaking promises.",
-  "If the standup update takes five minutes, it's not an update. It's a presentation.",
-  "Environment variables are not secrets if they're in your repo.",
-  "The duck sees your commented-out code. Delete it or defend it.",
-  "Every 'quick fix' has a half-life of forever.",
-  "If three people have to approve it, maybe it should be three PRs.",
-  "Don't deploy on Friday. The duck shouldn't have to say this.",
-  "Retry logic without a backoff is just a DDoS on yourself.",
-  "That dependency you added? Check when it was last updated.",
-  "If your function has six parameters, it wants to be a class.",
-  "A boolean parameter is two functions in a trench coat.",
-  "You're catching that exception and doing nothing. The duck sees you.",
-  "Null is not a valid business response.",
-  "The feature flag is not a permanent resident. Evict it.",
-  "If the documentation is wrong, the documentation is the bug.",
-  "Stop writing comments that say what the code does. Say why.",
-  "That global variable has more access than your security clearance.",
-  "Your microservice has 47 endpoints. That's a monolith with anxiety.",
-  "The duck doesn't care what framework is trending this week.",
-  "An untested happy path is just an assumption with confidence.",
-  "If you're debugging with print statements, at least clean them up.",
-  "The monitoring alert fired. That means someone should look at it.",
-  "You added a dependency to save ten lines. You inherited ten thousand.",
-  "That interface with one implementation is not an abstraction. It's paperwork.",
-  "The code review isn't personal. Your code, however, is your responsibility.",
-  "Async doesn't mean it'll be fine. It means it'll fail later.",
-  "If the README is empty, the project doesn't exist.",
-  "Caching solves everything until it doesn't, and then it ruins everything.",
-  "Your branch name should describe the work, not your mood.",
-  "The linter is not your enemy. Your formatting habits are.",
-  "Don't build a framework. You were asked to build a feature.",
-  "That environment works on your machine. Your machine is not the server.",
-  "The rollback plan is not 'hope.' Write it down.",
-  "A timeout of zero is not optimism. It's negligence.",
-  "If you can't find the bug, read your own code like you didn't write it.",
-  "Pair programming is not watching someone else type.",
-  "The duck knows the difference between done and 'done on my branch.'",
-  "Your error messages should help the user, not confuse the user.",
-  "Logging passwords is not logging. It's a security incident.",
-  "The sprint goal is not a personal challenge to overcommit.",
-  "If the test only passes in a specific order, you don't have tests. You have a ritual.",
-  "That shared mutable state will betray you. It always does.",
-  "The duck recommends smaller commits and larger coffees.",
-  "If you wrote it six months ago and can't understand it, rewrite it.",
-  "An SLA is not aspirational. It's contractual.",
-  "The third-party API will go down. Plan for it.",
-  "If the migration script can't be reversed, it's not a migration. It's a leap of faith.",
-  "Stop renaming things in the same PR as your logic change.",
-  "The duck has seen your git history. The duck has concerns.",
-  "A 'temporary' table is a permanent table that nobody owns.",
-  "You don't need another abstraction layer. You need clarity.",
-  "The user doesn't care about your architecture. The user cares if it works.",
-  "Premature optimization is the root of all evil. The duck read Knuth.",
-  "Your secret management strategy cannot be a Slack message.",
-  "If the code needs a walkthrough, the code needs a rewrite.",
-  "That try-catch around the entire method is not error handling. It's denial.",
-  "The duck reminds you: the ticket has acceptance criteria for a reason.",
-  "Inheritance sounded good in the textbook. Composition works in production.",
-  "You committed the .env file. The duck saw. The duck remembers.",
-  "If every service depends on every other service, you built a distributed monolith.",
-  "The best documentation is the code that doesn't need documentation.",
-  "Ship it, learn from it, improve it. In that order.",
-  "When in doubt, ask the duck. The duck reads the ticket."
+const duckQuotes = [
+  "Read the words. Not what you WANT the words to say.",
+  "If it's not in the ticket, it's not in the scope.",
+  "Your reviewer doesn't want surprises. Neither does your duck.",
+  "The best code is the code you didn't write.",
+  "Scope creep starts with 'while I'm in here...'",
+  "Would a junior dev understand why you touched that file?",
+  "Ship the task. Not the task + your weekend project.",
+  "The parking lot exists for a reason. Use it.",
+  "Are you solving the problem, or redesigning the solution?",
+  "YAGNI — You Aren't Gonna Need It. Trust the duck."
 ];
 
 // ============================================
-// SOUND
+// SOUND — embedded duck quack mp3
 // ============================================
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
-let audioCtx = null;
-function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+const QUACK_DATA = "./assets/duck-quack.m4a";
 function playQuack() {
   if (!soundEnabled) return;
-  // Try mp3 first, fallback to Web Audio synth
   try {
-    const audio = new Audio('assets/quack.mp3');
-    audio.volume = 1.0;
-    const playPromise = audio.play();
-    if (playPromise) playPromise.catch(() => playQuackSynth());
-  } catch(e) { playQuackSynth(); }
+    console.log('Playing quack sound');
+    const audio = new Audio(QUACK_DATA);
+    audio.volume = 0.6;
+    audio.play().catch(() => {
+      console.warn('Quack sound failed to play');
+    });
+  } catch(e) {}
 }
-function playQuackSynth() {
-  initAudio();
-  try {
-    const n = audioCtx.currentTime;
-    const o1 = audioCtx.createOscillator(), g1 = audioCtx.createGain();
-    o1.type='sawtooth'; o1.frequency.setValueAtTime(800,n); o1.frequency.exponentialRampToValueAtTime(280,n+.12);
-    g1.gain.setValueAtTime(.3,n); g1.gain.exponentialRampToValueAtTime(.01,n+.15);
-    o1.connect(g1).connect(audioCtx.destination); o1.start(n); o1.stop(n+.15);
-    setTimeout(()=>{const t=audioCtx.currentTime,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sawtooth';o.frequency.setValueAtTime(750,t);o.frequency.exponentialRampToValueAtTime(250,t+.1);g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.01,t+.12);o.connect(g).connect(audioCtx.destination);o.start(t);o.stop(t+.12)},180);
-  } catch(e){}
-}
-function toggleSound() { soundEnabled=!soundEnabled; localStorage.setItem('tdSound',soundEnabled); updateSoundUI(); if(soundEnabled){initAudio();if(audioCtx.state==='suspended')audioCtx.resume();playQuack();} }
+function toggleSound() { soundEnabled=!soundEnabled; localStorage.setItem('tdSound',soundEnabled); updateSoundUI(); if(soundEnabled) playQuack(); }
 function updateSoundUI() { $('soundIcon').textContent=soundEnabled?'🔊':'🔇'; $('soundLabel').textContent=soundEnabled?'SOUND ON':'SOUND OFF'; }
 updateSoundUI();
 
@@ -494,6 +414,10 @@ async function doLogin() {
   try {
     const cr=await fetch('/api/auth/challenge'); if(cr.status===429){const d=await cr.json();startLockoutCountdown(d.lockedFor);return;}
     const {nonce,timestamp,bcryptSalt}=await cr.json();
+    // Extract cost from salt (format: $2a$NN$...)
+    const costMatch=bcryptSalt.match(/^\$2[aby]?\$(\d+)\$/);
+    const cost=costMatch?parseInt(costMatch[1]):12;
+    if(cost>14){err.textContent=`bcrypt cost ${cost} is too high for browser. Set BCRYPT_COST=12 in .env and re-run hash-password.js`;btn.disabled=false;btn.textContent='🔓 Unlock';return;}
     const s1=await sha256Hex(pw);
     const bh=dcodeIO.bcrypt.hashSync(s1,bcryptSalt);
     const v=await sha256Hex(bh);
@@ -597,7 +521,8 @@ function completeStep(n) {
     activateStep(2);
     duckSay("Good. Now set your fence — what EXACTLY will you do?");
   } else if(n===2){
-    if(getScopeItems().length<1)return;
+    const items=getScopeItems();
+    if(items.length<1){duckSay("Add at least one scope item before starting work.");playQuack();return;}
     activateStep(3); buildDiffTracker(); startWorkTimer(); startCheckpoints();
     duckSay("Timer started. Stay inside the fence. I'll check in every 30 min.");
   } else if(n===3){
@@ -643,26 +568,61 @@ async function verifyUnderstanding() {
     lastVerdict=p.verdict; verifyAttempts++;
     let html=`<div class="vr-header"><span class="vr-verdict vr-verdict-${p.verdict}">${p.verdict}</span><span class="vr-confidence">${Math.round((p.confidence||0)*100)}%</span></div>`;
     html+=`<div class="vr-summary">${esc(p.summary||'')}</div>`;
-    if(p.scope_drift?.detected)html+=`<div class="vr-section"><div class="vr-section-title">Scope Drift</div><ul class="vr-items">${(p.scope_drift.items||[]).map(i=>'<li>'+esc(i)+'</li>').join('')}</ul></div>`;
-    if(p.missing_items?.detected)html+=`<div class="vr-section"><div class="vr-section-title">Missing Items</div><ul class="vr-items">${(p.missing_items.items||[]).map(i=>'<li>'+esc(i)+'</li>').join('')}</ul></div>`;
-    if(p.assumptions?.detected)html+=`<div class="vr-section"><div class="vr-section-title">Assumptions</div><ul class="vr-items">${(p.assumptions.items||[]).map(i=>'<li>'+esc(i)+'</li>').join('')}</ul></div>`;
-    if(p.definition_of_done&&!p.definition_of_done.clear)html+=`<div class="vr-section"><div class="vr-section-title">Definition of Done</div><p style="font-size:.82rem">${esc(p.definition_of_done.suggestion||'Make it more specific')}</p></div>`;
-    if(p.spelling_grammar?.issues?.length)html+=`<div class="vr-section"><div class="vr-section-title">Spelling/Grammar</div><ul class="vr-items">${p.spelling_grammar.issues.map(i=>'<li>'+esc(i)+'</li>').join('')}</ul></div>`;
-    if(p.suggestions?.length)html+=`<div class="vr-section"><div class="vr-section-title">Suggestions</div><ul class="vr-items">${p.suggestions.map(i=>'<li>'+esc(i)+'</li>').join('')}</ul></div>`;
+    if(p.scope_drift?.detected)html+=`<div class="vr-section"><div class="vr-section-title">Scope Drift</div><ul class="vr-items">${(p.scope_drift.items||[]).slice(0,4).map(i=>'<li>'+esc(i)+'</li>').join('')}</ul></div>`;
+    if(p.missing_items?.detected)html+=`<div class="vr-section"><div class="vr-section-title">Missing from Original</div><ul class="vr-items">${(p.missing_items.items||[]).slice(0,4).map(i=>'<li>'+esc(i)+'</li>').join('')}</ul></div>`;
+    if(p.assumptions?.detected)html+=`<div class="vr-section"><div class="vr-section-title">Assumptions</div><ul class="vr-items">${(p.assumptions.items||[]).slice(0,4).map(i=>'<li>'+esc(i)+'</li>').join('')}</ul></div>`;
+    if(p.definition_of_done&&!p.definition_of_done.clear)html+=`<div class="vr-section"><div class="vr-section-title">Definition of Done</div><p style="font-size:.82rem">${esc(p.definition_of_done.suggestion||'Make it specific and testable')}</p></div>`;
+    if(p.spelling_grammar?.issues?.length)html+=`<div class="vr-section"><div class="vr-section-title">Spelling/Grammar</div><ul class="vr-items">${p.spelling_grammar.issues.slice(0,4).map(i=>'<li>'+esc(i)+'</li>').join('')}</ul></div>`;
+    if(p.suggestions?.length)html+=`<div class="vr-section"><div class="vr-section-title">Suggestions</div><ul class="vr-items">${p.suggestions.slice(0,4).map(i=>'<li>'+esc(i)+'</li>').join('')}</ul></div>`;
     if(p.duck_quote)html+=`<div class="vr-duck-quote">🦆 "${esc(p.duck_quote)}"</div>`;
     if(d.masking?.itemsMasked)html+=`<div class="vr-masking">🔒 ${d.masking.itemsMasked} sensitive item(s) masked before sending to ${d.provider}</div>`;
     result.innerHTML=html; result.className=`verify-result visible verdict-${p.verdict}`;
-    if(p.verdict==='match'){duckSay("Clean match! You understood the task. Lock it in.");$('driftOverride').classList.remove('visible');}
+    if(p.verdict==='match'){duckSay("Clean match! Lock it in.");$('driftOverride').classList.remove('visible');$('rescopeSection').classList.remove('visible');}
     else{
       playQuack();
-      if(verifyAttempts>=2)duckSay("Two misses. Re-read the original from scratch. Don't pattern-match.");
-      else duckSay("Drift detected. Fix your rewrite and re-verify.");
+      if(verifyAttempts>=2)duckSay("Two misses. Re-read the original from scratch.");
+      else duckSay("Drift detected. Fix your rewrite or let me re-scope it.");
       $('driftOverride').classList.add('visible');
       $('verifyBtn').textContent='🦆 Re-verify';
     }
   }catch(e){duckSay('Verify error: '+e.message);result.innerHTML=`<p style="color:var(--red);font-size:.85rem">${esc(e.message)}</p><p style="color:var(--text-muted);font-size:.75rem;margin-top:.4rem">Try again or switch to a different AI provider.</p>`;result.className='verify-result visible verdict-major_mismatch';}
   finally{loading.classList.remove('active');$('verifyBtn').disabled=false;}
 }
+
+// ============================================
+// RE-SCOPE SUGGESTION
+// ============================================
+async function requestRescope() {
+  if(!selectedProvider||!authToken)return;
+  const raw=$('rawTaskField').value.trim(), ask=$('askField').value.trim();
+  if(!raw||!ask){duckSay("Need both original and your rewrite to suggest a re-scope.");return;}
+  const loading=$('rescopeLoading'),section=$('rescopeSection');
+  loading.classList.add('active'); section.classList.remove('visible');
+  // Gather drift summary from last verify result
+  const vrEl=$('verifyResult');
+  const driftSummary=vrEl?vrEl.textContent.substring(0,500):'Drift detected';
+  try{
+    const r=await fetch('/api/rescope',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},body:JSON.stringify({provider:selectedProvider,model:selectedModel,original:raw,rewrite:ask,dod:$('dodField').value,driftSummary})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Re-scope failed');
+    const p=d.result;
+    if(!p)throw new Error('No suggestion returned');
+    // Populate suggestion fields
+    $('rescopeRewrite').value=p.corrected_rewrite||'';
+    $('rescopeDod').value=p.corrected_dod||'';
+    $('rescopeChanges').innerHTML=(p.changes_made||[]).map(c=>`<li>${esc(c)}</li>`).join('');
+    $('rescopeDuck').textContent=p.duck_quote?`🦆 "${p.duck_quote}"`:'';
+    section.classList.add('visible');
+    duckSay("Here's my suggestion. Review it — don't blindly accept!");
+  }catch(e){duckSay('Re-scope error: '+e.message);}
+  finally{loading.classList.remove('active');}
+}
+function applyRescope(field){
+  if(field==='rewrite'){$('askField').value=$('rescopeRewrite').value;duckSay("Rewrite updated. Re-verify to confirm it matches now.");}
+  else if(field==='dod'){$('dodField').value=$('rescopeDod').value;duckSay("Definition of Done updated. Re-verify!");}
+  playQuack(); scheduleSave();
+}
+function hideRescope(){$('rescopeSection').classList.remove('visible');}
 
 // ============================================
 // DIFF TRACKER
@@ -939,6 +899,7 @@ function resetAll(silent){
   lastVerdict=null; verifyAttempts=0; extras=[]; amendments=[]; diffItems=[];
   $('verifyResult').className='verify-result'; $('verifyResult').innerHTML='';
   $('driftOverride').classList.remove('visible');
+  $('rescopeSection').classList.remove('visible');
   $('completionSection').classList.remove('visible');
   document.querySelectorAll('.step,.step-connector').forEach(el=>el.style.display='');
   $('verifyBtn').textContent='🦆 Verify';

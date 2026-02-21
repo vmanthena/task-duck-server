@@ -133,15 +133,24 @@ const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('he
 const SESSION_HOURS = parseInt(process.env.SESSION_HOURS || '24');
 
 // Auth: PASSWORD_VERIFIER = sha256(bcrypt(sha256(password)))
-const PASSWORD_VERIFIER = process.env.PASSWORD_VERIFIER || '';
-const BCRYPT_COST = parseInt(process.env.BCRYPT_COST || '12');
+const PASSWORD_VERIFIER = (process.env.PASSWORD_VERIFIER || '').replace(/^["']|["']$/g, '').trim();
+const BCRYPT_COST = Math.min(parseInt(process.env.BCRYPT_COST || '12'), 16);
 
 // LLM Keys
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const ANTHROPIC_API_KEY = (process.env.ANTHROPIC_API_KEY || '').replace(/^["']|["']$/g, '').trim();
+const OPENAI_API_KEY = (process.env.OPENAI_API_KEY || '').replace(/^["']|["']$/g, '').trim();
+const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').replace(/^["']|["']$/g, '').trim();
 
 const CUSTOM_MASKS_RAW = process.env.CUSTOM_MASKS || '';
+
+// Startup diagnostics — key format check
+if (ANTHROPIC_API_KEY) {
+  const k = ANTHROPIC_API_KEY;
+  if (!k.startsWith('sk-ant-')) console.warn('⚠️  ANTHROPIC_API_KEY does not start with sk-ant- — check .env format (no quotes!)');
+  else console.log(`✅ Anthropic key loaded (${k.substring(0,10)}...${k.substring(k.length-4)}, ${k.length} chars)`);
+}
+if (OPENAI_API_KEY) console.log(`✅ OpenAI key loaded (${OPENAI_API_KEY.substring(0,7)}..., ${OPENAI_API_KEY.length} chars)`);
+if (GEMINI_API_KEY) console.log(`✅ Gemini key loaded (${GEMINI_API_KEY.substring(0,7)}..., ${GEMINI_API_KEY.length} chars)`);
 
 // ============================================================
 // NONCE STORE
@@ -175,7 +184,7 @@ setInterval(() => {
 // CLI and browser produce the same bcrypt hash for the same password.
 // ============================================================
 
-const BCRYPT_SALT = process.env.BCRYPT_SALT || '';
+const BCRYPT_SALT = (process.env.BCRYPT_SALT || '').replace(/^["']|["']$/g, '').trim();
 
 function verifyProof(proof, timestamp) {
   if (!proof || !timestamp || !PASSWORD_VERIFIER) return false;
@@ -262,43 +271,44 @@ class DataMasker {
 // ============================================================
 // VERIFICATION PROMPT
 // ============================================================
-const SYS_PROMPT = `You are a Task Understanding Verifier for "Task Duck." Compare an ORIGINAL task against the architect's REWRITTEN understanding. Detect semantic drift, scope additions, missing requirements, misinterpretations, AND spelling/grammar issues.
-
-Evaluate: 1) INTENT MATCH 2) SCOPE DRIFT (architect's #1 weakness — be STRICT) 3) MISSING ITEMS 4) ASSUMPTIONS 5) DEFINITION OF DONE quality 6) SPELLING & GRAMMAR in the rewrite
+const SYS_PROMPT = `Task Understanding Verifier. Compare ORIGINAL task vs architect's REWRITE.
 
 Respond ONLY with valid JSON (no fences, no preamble):
 {
   "verdict": "match" | "drift" | "missing" | "major_mismatch",
   "confidence": 0.0-1.0,
-  "summary": "One sentence assessment",
-  "intent_match": {"status": "aligned"|"partial"|"misaligned", "detail": "..."},
-  "scope_drift": {"detected": bool, "items": ["things ADDED not in original"]},
-  "missing_items": {"detected": bool, "items": ["things in original that are MISSED"]},
-  "assumptions": {"detected": bool, "items": ["assumptions not in original"]},
-  "definition_of_done": {"clear": bool, "suggestion": "how to make it more specific if vague"},
-  "spelling_grammar": {"issues": ["list of typos or grammar fixes, empty if clean"]},
-  "suggestions": ["actionable fixes for the rewrite"],
-  "duck_quote": "short duck-themed reminder specific to the issue found"
+  "summary": "1 sentence. What's wrong or what matched.",
+  "scope_drift": {"detected": bool, "items": ["1 short sentence each - what was added that shouldn't be"]},
+  "missing_items": {"detected": bool, "items": ["1 short sentence each - what was missed from original"]},
+  "assumptions": {"detected": bool, "items": ["1 short sentence each"]},
+  "definition_of_done": {"clear": bool, "suggestion": "1 sentence - how to make DoD testable"},
+  "spelling_grammar": {"issues": ["word → correction"]},
+  "suggestions": ["1 sentence each - specific fix"],
+  "duck_quote": "short duck-themed encouragement"
 }
 
-Rules: Be STRICT on scope drift. Verb changes matter ("add" vs "redesign"). Placeholders like [SERVICE_A] are masked sensitive data — analyze structure not values.`;
+Rules:
+- Be STRICT on scope drift. Verb changes matter ("add" vs "redesign").
+- Be concise but specific. Each item should clearly state what's wrong.
+- Max 3 items per category. Omit empty categories.
+- Placeholders like [SERVICE_A] are masked sensitive data — analyze structure not values.`;
 
-const USR_TMPL = `## ORIGINAL TASK (verbatim from ticket)
+const USR_TMPL = `## ORIGINAL
 {ORIGINAL}
 
-## ARCHITECT'S REWRITTEN UNDERSTANDING
+## REWRITE
 {REWRITE}
 
-## STATED DELIVERABLE
+## DELIVERABLE
 {DELIVERABLE}
 
 ## DEFINITION OF DONE
 {DOD}
 
-## STATED "NOT IN SCOPE"
+## NOT IN SCOPE
 {NOT_ASKED}
 
-Compare original against rewrite. Detect drift, missing items, assumptions. Check if Definition of Done is specific and verifiable. Flag spelling/grammar issues in the rewrite. Be strict about scope additions.`;
+Compare. Be concise but specific about each issue.`;
 
 // ============================================================
 // LLM PROVIDERS
@@ -492,6 +502,76 @@ app.post('/api/verify', requireAuth, async (req, res) => {
   }
 });
 
+// Re-scope — suggest corrected rewrite + DoD based on drift analysis
+const RESCOPE_PROMPT = `Task Scope Corrector. Fix the architect's drifted rewrite to match the original task.
+
+Rules:
+- ONLY what's in the original. Never add scope.
+- Remove anything architect added that's not in original.
+- Add back anything from original that architect missed.
+- DoD must be yes/no testable.
+- Match architect's writing style.
+
+Respond ONLY with valid JSON (no fences, no preamble):
+{
+  "corrected_rewrite": "the fixed rewrite that strictly matches original scope",
+  "corrected_dod": "specific, testable definition of done",
+  "changes_made": ["1 sentence each - what you changed and why, e.g. 'Removed database migration - not in original ticket'"],
+  "duck_quote": "short encouraging duck message"
+}
+
+IMPORTANT: changes_made MUST list every change. Be specific about what was removed or added back.`;
+
+const RESCOPE_USR = `## ORIGINAL
+{ORIGINAL}
+
+## DRIFTED REWRITE
+{REWRITE}
+
+## CURRENT DOD
+{DOD}
+
+## DRIFT ISSUES
+{DRIFT_SUMMARY}
+
+Fix it. List every change in changes_made.`;
+
+app.post('/api/rescope', requireAuth, async (req, res) => {
+  const { provider, model, original, rewrite, dod, driftSummary } = req.body;
+  if (!provider || !original || !rewrite) return res.status(400).json({ error: 'Missing fields' });
+  if (!providers[provider]) return res.status(400).json({ error: `Unknown provider: ${provider}` });
+  const key = { anthropic: ANTHROPIC_API_KEY, openai: OPENAI_API_KEY, gemini: GEMINI_API_KEY }[provider];
+  if (!key) return res.status(400).json({ error: `${provider} not configured` });
+  try {
+    const m = new DataMasker(CUSTOM_MASKS_RAW);
+    const up = RESCOPE_USR
+      .replace('{ORIGINAL}', m.mask(original))
+      .replace('{REWRITE}', m.mask(rewrite))
+      .replace('{DOD}', m.mask(dod || '') || '(not specified)')
+      .replace('{DRIFT_SUMMARY}', m.mask(driftSummary || '') || '(none)');
+    const raw = await providers[provider](RESCOPE_PROMPT, up, model);
+    if (!raw || !raw.trim()) throw new Error(`${provider} returned empty response`);
+    let p;
+    try {
+      let cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
+      const fb = cleaned.indexOf('{'), lb = cleaned.lastIndexOf('}');
+      if (fb !== -1 && lb > fb) cleaned = cleaned.substring(fb, lb + 1);
+      p = JSON.parse(cleaned);
+    } catch {
+      p = { corrected_rewrite: '', corrected_dod: '', changes_made: ['Could not parse AI response'], duck_quote: 'Try again!' };
+    }
+    // Unmask
+    if (p.corrected_rewrite) p.corrected_rewrite = m.unmask(p.corrected_rewrite);
+    if (p.corrected_dod) p.corrected_dod = m.unmask(p.corrected_dod);
+    if (p.changes_made) p.changes_made = p.changes_made.map(i => m.unmask(i));
+    if (p.duck_quote) p.duck_quote = m.unmask(p.duck_quote);
+    res.json({ result: p, provider });
+  } catch (e) {
+    console.error(`[rescope] ${provider}:`, e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('*', (_,r) => r.sendFile(path.join(__dirname,'..','public','index.html')));
 
 // ============================================================
@@ -499,6 +579,11 @@ app.get('*', (_,r) => r.sendFile(path.join(__dirname,'..','public','index.html')
 // ============================================================
 if (!PASSWORD_VERIFIER) console.warn('\n⚠️  PASSWORD_VERIFIER not set! Run: node hash-password.js\n');
 if (!BCRYPT_SALT) console.warn('⚠️  BCRYPT_SALT not set! Run: node hash-password.js --gen-salt\n');
+if (parseInt(process.env.BCRYPT_COST || '12') > 14) console.warn(`⚠️  BCRYPT_COST=${process.env.BCRYPT_COST} is too high! Capped at 14. Cost 24 = ~17 min per hash. Regenerate: BCRYPT_COST=12 node hash-password.js\n`);
+if (BCRYPT_SALT) {
+  const m = BCRYPT_SALT.match(/^\$2[aby]?\$(\d+)\$/);
+  if (m && parseInt(m[1]) > 14) console.warn(`⚠️  BCRYPT_SALT encodes cost ${m[1]}! Browser will freeze. Regenerate: BCRYPT_COST=12 node hash-password.js\n`);
+}
 
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🦆 Task Duck v4.0.0 — port ${PORT}`);

@@ -11,11 +11,11 @@
  *   node hash-password.js --gen-salt       Generate a new bcrypt salt
  *   node hash-password.js --verify "pw"    Verify against env
  */
-
+import 'dotenv/config';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { stdin, stdout } from 'process';
-import 'dotenv/config';
+
 const BCRYPT_COST = parseInt(process.env.BCRYPT_COST || '12');
 
 // ============================================================
