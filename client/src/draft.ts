@@ -33,7 +33,9 @@ export function loadDraft(): boolean {
     const d = JSON.parse(localStorage.getItem(STORAGE_KEYS.draft) || 'null');
     if (!d) return false;
     setFormData(d);
-    state.lastVerdict = d.lastVerdict || null;
+    // Only restore lastVerdict as 'match' — non-match verdicts require
+    // the user to re-verify since the verify result UI isn't restored.
+    state.lastVerdict = d.lastVerdict === 'match' ? 'match' : null;
     if (d.scope?.length) {
       $('scopeList').innerHTML = '';
       d.scope.forEach((s: { text: string; minutes: number }) => {

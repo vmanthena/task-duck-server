@@ -133,3 +133,15 @@ body.kb-hints-visible .kb-hint {
 .step-actions .provider-bar {
   margin-right: auto;
 }
+
+/* Step 1 → Step 2 continue bar (lives between steps, outside step-body) */
+.step1-actions {
+  display: none;
+  justify-content: flex-end;
+  padding: var(--sp-6) 0;
+  margin-bottom: var(--sp-5);
+}
+
+#step1.active ~ .step1-actions {
+  display: flex;
+}

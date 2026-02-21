@@ -21,6 +21,11 @@ export function activateStep(n: number): void {
     else s.classList.remove('completed');
   }
   scheduleSave();
+  // Scroll new step into view after transition
+  setTimeout(() => {
+    const el = $('step' + n);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
 }
 
 export function reopenStep(n: number): void {
