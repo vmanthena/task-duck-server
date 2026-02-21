@@ -15,7 +15,13 @@
       "Bash(head:*)",
       "Bash(cd \"D:/nmanthena/Projects/task-duck-server\" && npm run build 2>&1)",
       "Bash(cd \"D:/nmanthena/Projects/task-duck-server\" && npm run typecheck 2>&1)",
-      "Bash(cd /d/nmanthena/Projects/task-duck-server && npx tsc --noEmit 2>&1 && npm run build 2>&1)"
+      "Bash(cd /d/nmanthena/Projects/task-duck-server && npx tsc --noEmit 2>&1 && npm run build 2>&1)",
+      "Bash(node:*)",
+      "Bash(cd /d/nmanthena/Projects/task-duck-server && npm install --save-dev vitest @vitest/coverage-v8 @vitest/ui happy-dom supertest @types/supertest 2>&1)",
+      "Bash(cd /d/nmanthena/Projects/task-duck-server && npx vitest run 2>&1)",
+      "Bash(cd /d/nmanthena/Projects/task-duck-server && npx vitest run tests/unit/server/services/authService.test.ts 2>&1)",
+      "Bash(cd /d/nmanthena/Projects/task-duck-server && npx vitest run tests/unit/server/services/authService.test.ts tests/unit/client/utils.test.ts tests/unit/client/formData.test.ts 2>&1)",
+      "Bash(cd /d/nmanthena/Projects/task-duck-server && npx vitest run --coverage 2>&1)"
     ]
   }
 }
