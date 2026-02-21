@@ -2,23 +2,7 @@ import { $, esc } from './utils.js';
 import { state } from './state.js';
 import { duckSay } from './duck.js';
 import { getScopeItems } from './scope.js';
-
-function gatherData() {
-  return {
-    taskId: ($('taskIdField') as HTMLInputElement).value,
-    title: ($('taskTitleField') as HTMLInputElement).value,
-    raw: ($('rawTaskField') as HTMLTextAreaElement).value,
-    ask: ($('askField') as HTMLTextAreaElement).value,
-    deliverable: ($('deliverableField') as HTMLTextAreaElement).value,
-    dod: ($('dodField') as HTMLTextAreaElement).value,
-    notAsked: ($('notAskedField') as HTMLTextAreaElement).value,
-    approach: ($('approachField') as HTMLTextAreaElement).value,
-    peerWho: ($('peerWho') as HTMLTextAreaElement).value,
-    peerSurprise: ($('peerSurprise') as HTMLTextAreaElement).value,
-    parkingLot: ($('parkingLot') as HTMLTextAreaElement).value,
-    storyPoints: ($('storyPointsField') as HTMLInputElement).value,
-  };
-}
+import { gatherFormData } from './formData.js';
 
 export function printPlan(): void {
   const scope = getScopeItems();
@@ -63,7 +47,7 @@ export function printFinal(): void {
 }
 
 export function exportMarkdown(): void {
-  const d = gatherData(), scope = getScopeItems();
+  const d = gatherFormData(), scope = getScopeItems();
   let md = `## 🦆 Task Duck — ${d.taskId} ${d.title}\n\n**Date:** ${new Date().toLocaleDateString()}\n\n`;
   md += `### What's Being Asked\n${d.ask}\n\n### Deliverable\n${d.deliverable}\n\n### Definition of Done\n${d.dod}\n\n### NOT In Scope\n${d.notAsked}\n\n`;
   if (d.storyPoints) md += `**Story Points:** ${d.storyPoints}\n\n`;

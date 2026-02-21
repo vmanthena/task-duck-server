@@ -3,9 +3,10 @@ import { state } from './state.js';
 import { duckSay } from './duck.js';
 import { playQuack } from './sound.js';
 import { getScopeItems } from './scope.js';
+import { TIMERS } from '../../shared/constants.js';
 
 export function startCheckpoints(): void {
-  state.checkpointInterval = setInterval(showCheckpoint, 30 * 60 * 1000);
+  state.checkpointInterval = setInterval(showCheckpoint, TIMERS.checkpointMs);
 }
 
 export function stopCheckpoints(): void {
@@ -34,7 +35,7 @@ export function showCreep(msg: string): void {
   $('creepMessage').textContent = msg;
   $('creepAlert').classList.add('show');
   playQuack();
-  setTimeout(hideCreep, 6000);
+  setTimeout(hideCreep, TIMERS.creepAlertMs);
 }
 
 export function hideCreep(): void {

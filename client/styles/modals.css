@@ -8,7 +8,7 @@
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s;
+  transition: opacity var(--ease-base);
 }
 
 .checkpoint-overlay.show {
@@ -27,15 +27,19 @@
   box-shadow: 0 0 40px var(--yellow-glow);
 }
 
+.checkpoint-duck {
+  font-size: 3rem;
+}
+
 .checkpoint-modal h3 {
-  font-size: 1.1rem;
+  font-size: var(--fs-2xl);
   font-weight: 700;
   margin-bottom: 0.4rem;
   color: var(--yellow);
 }
 
 .checkpoint-modal p {
-  font-size: 0.88rem;
+  font-size: var(--fs-md);
   color: var(--text-dim);
   margin-bottom: 1rem;
 }
@@ -43,10 +47,10 @@
 .checkpoint-modal .cm-scope {
   text-align: left;
   background: var(--bg);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 0.65rem;
   margin-bottom: 1rem;
-  font-size: 0.8rem;
+  font-size: var(--fs-base);
 }
 
 .checkpoint-modal .cm-scope li {
@@ -54,7 +58,7 @@
   list-style: none;
   cursor: pointer;
   padding: 0.2rem 0.4rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .checkpoint-modal .cm-scope li:hover {
@@ -88,7 +92,7 @@
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s;
+  transition: opacity var(--ease-base);
 }
 
 .md-overlay.show {
@@ -109,7 +113,7 @@
 }
 
 .md-modal h3 {
-  font-size: 1rem;
+  font-size: var(--fs-xl);
   font-weight: 600;
   margin-bottom: 0.75rem;
 }
@@ -118,11 +122,11 @@
   flex: 1;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 0.75rem;
   color: var(--green);
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   resize: none;
   min-height: 300px;
   outline: none;
@@ -146,10 +150,10 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-lg);
   z-index: 100;
   transform: translateY(120%);
-  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform var(--ease-spring);
   max-width: 320px;
 }
 
@@ -163,7 +167,7 @@
 }
 
 .creep-alert p {
-  font-size: 0.8rem;
+  font-size: var(--fs-base);
   line-height: 1.4;
 }
 
@@ -185,10 +189,10 @@
   transform: translateX(-50%);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-xl);
   padding: 0.35rem 0.85rem;
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   color: var(--text-dim);
   z-index: 50;
   display: none;
@@ -203,6 +207,10 @@
 .wt-time {
   color: var(--orange);
   font-weight: 500;
+}
+
+.wt-label {
+  color: var(--text-muted);
 }
 
 .wt-btn {
@@ -225,7 +233,7 @@
   z-index: 150;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s;
+  transition: opacity var(--ease-base);
 }
 
 .overlay.show {

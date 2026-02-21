@@ -1,6 +1,7 @@
 import { $ } from './utils.js';
 import { state } from './state.js';
 import { ICON } from './icons.js';
+import { STORAGE_KEYS } from '../../shared/constants.js';
 
 const QUACK_DATA = './assets/duck-quack.m4a';
 
@@ -10,12 +11,12 @@ export function playQuack(): void {
     const audio = new Audio(QUACK_DATA);
     audio.volume = 0.6;
     audio.play().catch(() => {});
-  } catch {}
+  } catch { /* audio playback not available */ }
 }
 
 export function toggleSound(): void {
   state.soundEnabled = !state.soundEnabled;
-  localStorage.setItem('tdSound', String(state.soundEnabled));
+  localStorage.setItem(STORAGE_KEYS.sound, String(state.soundEnabled));
   updateSoundUI();
   if (state.soundEnabled) playQuack();
 }

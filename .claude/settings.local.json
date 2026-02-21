@@ -14,7 +14,8 @@
       "Bash(cd /d/nmanthena/Projects/task-duck-server && npm run typecheck 2>&1 && npm run build 2>&1)",
       "Bash(head:*)",
       "Bash(cd \"D:/nmanthena/Projects/task-duck-server\" && npm run build 2>&1)",
-      "Bash(cd \"D:/nmanthena/Projects/task-duck-server\" && npm run typecheck 2>&1)"
+      "Bash(cd \"D:/nmanthena/Projects/task-duck-server\" && npm run typecheck 2>&1)",
+      "Bash(cd /d/nmanthena/Projects/task-duck-server && npx tsc --noEmit 2>&1 && npm run build 2>&1)"
     ]
   }
 }

@@ -1,4 +1,4 @@
-import { $ } from './utils.js';
+import { $, formatTime } from './utils.js';
 import { state } from './state.js';
 import { ICON } from './icons.js';
 
@@ -10,15 +10,9 @@ export function startWorkTimer(): void {
   state.workTimerInterval = setInterval(() => {
     if (!state.workTimerPaused) {
       state.workTimerSeconds++;
-      updateTimerDisplay();
+      $('workTimerDisplay').textContent = formatTime(state.workTimerSeconds);
     }
   }, 1000);
-}
-
-function updateTimerDisplay(): void {
-  const m = Math.floor(state.workTimerSeconds / 60);
-  const s = state.workTimerSeconds % 60;
-  $('workTimerDisplay').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 export function toggleWorkTimer(): void {

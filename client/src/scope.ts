@@ -7,12 +7,14 @@ export interface ScopeItem {
   minutes: number;
 }
 
+const SCOPE_ITEM_HTML = '<input type="text" placeholder="I will do this..." oninput="checkScope()"><input type="number" placeholder="min" min="1" max="480" oninput="updateTimeSummary()"><span class="time-label">min</span><button class="remove-btn" onclick="removeScope(this)">×</button>';
+
 export function addScope(): void {
   const list = $('scopeList');
   if (list.children.length >= 5) { showCreep('5 items max! If you need more, the task is too big.'); return; }
   const div = document.createElement('div');
   div.className = 'scope-item';
-  div.innerHTML = '<input type="text" placeholder="I will do this..." oninput="checkScope()"><input type="number" placeholder="min" min="1" max="480" oninput="updateTimeSummary()"><span class="time-label">min</span><button class="remove-btn" onclick="removeScope(this)">×</button>';
+  div.innerHTML = SCOPE_ITEM_HTML;
   list.appendChild(div);
   updateAddBtn();
   scheduleSave();
@@ -102,7 +104,7 @@ export function initScope(): void {
   for (let i = 0; i < 3; i++) {
     const div = document.createElement('div');
     div.className = 'scope-item';
-    div.innerHTML = '<input type="text" placeholder="I will do this..." oninput="checkScope()"><input type="number" placeholder="min" min="1" max="480" oninput="updateTimeSummary()"><span class="time-label">min</span><button class="remove-btn" onclick="removeScope(this)">×</button>';
+    div.innerHTML = SCOPE_ITEM_HTML;
     list.appendChild(div);
   }
 }

@@ -1,7 +1,7 @@
 .verify-result {
-  margin-top: 0.65rem;
+  margin-top: var(--sp-5);
   padding: 0.75rem;
-  border-radius: 10px;
+  border-radius: var(--radius-xl);
   border: 1px solid var(--border);
   display: none;
 }
@@ -44,7 +44,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.12rem 0.45rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
@@ -76,12 +76,12 @@
 
 .vr-confidence {
   font-family: var(--mono);
-  font-size: 0.68rem;
+  font-size: var(--fs-sm);
   color: var(--text-dim);
 }
 
 .vr-summary {
-  font-size: 0.88rem;
+  font-size: var(--fs-md);
   line-height: 1.5;
   margin-bottom: 0.4rem;
 }
@@ -92,14 +92,14 @@
 
 .vr-section-title {
   font-family: var(--mono);
-  font-size: 0.65rem;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   color: var(--text-dim);
   margin-bottom: 0.15rem;
 }
 
 .vr-items {
-  font-size: 0.82rem;
+  font-size: var(--fs-base);
   padding-left: 1rem;
 }
 
@@ -109,7 +109,7 @@
 
 .vr-duck-quote {
   font-style: italic;
-  font-size: 0.82rem;
+  font-size: var(--fs-base);
   color: var(--yellow);
   margin-top: 0.4rem;
   padding-top: 0.4rem;
@@ -118,7 +118,7 @@
 
 .vr-masking {
   font-family: var(--mono);
-  font-size: 0.6rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   margin-top: 0.3rem;
   display: flex;
@@ -131,7 +131,7 @@
   align-items: center;
   gap: 0.5rem;
   font-family: var(--mono);
-  font-size: 0.78rem;
+  font-size: var(--fs-base);
   color: var(--yellow);
   margin-top: 0.5rem;
 }
@@ -145,7 +145,7 @@
   height: 16px;
   border: 2px solid var(--border);
   border-top-color: var(--yellow);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   animation: spin 0.6s linear infinite;
 }
 
@@ -154,7 +154,7 @@
   padding: 0.55rem;
   background: var(--orange-dim);
   border: 1px solid var(--orange);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   display: none;
 }
 
@@ -171,7 +171,7 @@
   align-items: center;
   gap: 0.5rem;
   font-family: var(--mono);
-  font-size: 0.78rem;
+  font-size: var(--fs-base);
   color: var(--blue);
   margin-top: 0.5rem;
 }
@@ -186,7 +186,7 @@
   padding: 0.7rem;
   background: var(--blue-dim);
   border: 1px solid var(--blue);
-  border-radius: 10px;
+  border-radius: var(--radius-xl);
 }
 
 .rescope-section.visible {
@@ -199,7 +199,7 @@
   justify-content: space-between;
   margin-bottom: 0.4rem;
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--blue);
 }
@@ -216,7 +216,7 @@
 
 .rescope-changes {
   margin-bottom: 0.5rem;
-  font-size: 0.78rem;
+  font-size: var(--fs-base);
   line-height: 1.5;
 }
 
@@ -242,7 +242,7 @@
 .rescope-field label {
   display: block;
   font-family: var(--mono);
-  font-size: 0.62rem;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--blue);
@@ -253,11 +253,11 @@
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 0.5rem 0.7rem;
   color: var(--text);
   font-family: var(--sans);
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   line-height: 1.5;
   resize: vertical;
   outline: none;
@@ -267,11 +267,11 @@
 .rescope-readonly {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 0.5rem 0.7rem;
   color: var(--text);
   font-family: var(--sans);
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   line-height: 1.5;
   white-space: pre-wrap;
   user-select: text;
@@ -334,12 +334,12 @@
 
 .rescope-sp-split {
   font-family: var(--mono);
-  font-size: 0.65rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--red);
   background: var(--red-dim, rgba(255, 60, 60, 0.1));
   padding: 0.1rem 0.4rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -352,7 +352,7 @@
   margin-top: 0.2rem;
   padding: 0.2rem 0.45rem;
   background: var(--red-dim, rgba(255, 60, 60, 0.1));
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   border-left: 3px solid var(--red);
 }
 
@@ -363,7 +363,7 @@
 .vr-story-points {
   margin-bottom: 0.35rem;
   padding: 0.35rem 0.55rem;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: var(--bg);
 }
@@ -373,7 +373,7 @@
 }
 
 .vr-sp-assessment {
-  font-size: 0.82rem;
+  font-size: var(--fs-base);
   line-height: 1.4;
   margin-bottom: 0.15rem;
 }
@@ -383,10 +383,10 @@
   align-items: center;
   gap: 0.25rem;
   font-family: var(--mono);
-  font-size: 0.68rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   padding: 0.08rem 0.35rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   margin-right: 0.25rem;
 }
 
@@ -406,7 +406,7 @@
 
 .rescope-duck {
   font-style: italic;
-  font-size: 0.8rem;
+  font-size: var(--fs-base);
   color: var(--blue);
   margin-top: 0.4rem;
   padding-top: 0.4rem;

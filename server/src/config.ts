@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { createLogger, configureLogger, type LogLevel } from '../../shared/logger.js';
+import { BCRYPT } from '../../shared/constants.js';
 
 function cleanEnv(key: string): string {
   return (process.env[key] || '').replace(/^["']|["']$/g, '').trim();
@@ -12,7 +13,7 @@ export const SESSION_HOURS = parseInt(process.env.SESSION_HOURS || '24');
 
 export const PASSWORD_VERIFIER = cleanEnv('PASSWORD_VERIFIER');
 export const BCRYPT_SALT = cleanEnv('BCRYPT_SALT');
-export const BCRYPT_COST = Math.max(15, Math.min(parseInt(process.env.BCRYPT_COST || '15'), 16));
+export const BCRYPT_COST = Math.max(BCRYPT.minCost, Math.min(parseInt(process.env.BCRYPT_COST || String(BCRYPT.minCost)), BCRYPT.maxCost));
 
 export const ANTHROPIC_API_KEY = cleanEnv('ANTHROPIC_API_KEY');
 export const OPENAI_API_KEY = cleanEnv('OPENAI_API_KEY');
@@ -44,17 +45,17 @@ export function printDiagnostics(): void {
   if (GEMINI_API_KEY) log.info(`Gemini key loaded (${GEMINI_API_KEY.substring(0, 7)}..., ${GEMINI_API_KEY.length} chars)`);
   if (!PASSWORD_VERIFIER) log.warn('PASSWORD_VERIFIER not set! Run: npm run hash');
   if (!BCRYPT_SALT) log.warn('BCRYPT_SALT not set! Run: npm run hash -- --gen-salt');
-  const rawCost = parseInt(process.env.BCRYPT_COST || '15');
-  if (rawCost < 15) {
-    log.warn(`BCRYPT_COST=${process.env.BCRYPT_COST} is too low! Minimum is 15. Enforced: BCRYPT_COST=${BCRYPT_COST}`);
+  const rawCost = parseInt(process.env.BCRYPT_COST || String(BCRYPT.minCost));
+  if (rawCost < BCRYPT.minCost) {
+    log.warn(`BCRYPT_COST=${process.env.BCRYPT_COST} is too low! Minimum is ${BCRYPT.minCost}. Enforced: BCRYPT_COST=${BCRYPT_COST}`);
   }
-  if (rawCost > 16) {
-    log.warn(`BCRYPT_COST=${process.env.BCRYPT_COST} is too high! Capped at 16. Enforced: BCRYPT_COST=${BCRYPT_COST}`);
+  if (rawCost > BCRYPT.maxCost) {
+    log.warn(`BCRYPT_COST=${process.env.BCRYPT_COST} is too high! Capped at ${BCRYPT.maxCost}. Enforced: BCRYPT_COST=${BCRYPT_COST}`);
   }
   if (BCRYPT_SALT) {
     const m = BCRYPT_SALT.match(/^\$2[aby]?\$(\d+)\$/);
-    if (m && parseInt(m[1]) < 15) {
-      log.warn(`BCRYPT_SALT encodes cost ${m[1]}! Minimum is 15. Regenerate: BCRYPT_COST=15 npm run hash`);
+    if (m && parseInt(m[1]) < BCRYPT.minCost) {
+      log.warn(`BCRYPT_SALT encodes cost ${m[1]}! Minimum is ${BCRYPT.minCost}. Regenerate: BCRYPT_COST=${BCRYPT.minCost} npm run hash`);
     }
   }
 }

@@ -6,14 +6,14 @@
   padding: 0.85rem 1.25rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-2xl);
   animation: fadeDown 0.6s ease;
 }
 
 .header .duck-avatar {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  width: 3rem;
+  height: 3rem;
   background: var(--yellow-dim);
   border-radius: 50%;
   display: flex;
@@ -21,7 +21,7 @@
   justify-content: center;
   font-size: 1.6rem;
   cursor: pointer;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition: transform var(--ease-base), box-shadow var(--ease-base);
   user-select: none;
 }
 
@@ -39,7 +39,7 @@
 }
 
 .header .header-center h1 {
-  font-size: 1.4rem;
+  font-size: var(--fs-3xl);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.2;
@@ -70,7 +70,7 @@
 
 .header .duck-speech .label {
   font-family: var(--mono);
-  font-size: 0.6rem;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--yellow);
@@ -78,7 +78,7 @@
 }
 
 .header .duck-speech p {
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   line-height: 1.45;
   color: var(--text-dim);
 }
@@ -89,18 +89,18 @@
   top: 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 0.35rem 0.6rem;
   color: var(--text-dim);
   cursor: pointer;
   z-index: 50;
-  transition: all 0.2s;
+  transition: all var(--ease-fast);
   display: flex;
   align-items: center;
   gap: 0.35rem;
   user-select: none;
   font-family: var(--mono);
-  font-size: 0.65rem;
+  font-size: var(--fs-xs);
 }
 
 .sound-toggle {
@@ -123,11 +123,11 @@
   bottom: 1rem;
   left: 1rem;
   font-family: var(--mono);
-  font-size: 0.6rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   z-index: 50;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity var(--ease-base);
 }
 
 .autosave-indicator.show {

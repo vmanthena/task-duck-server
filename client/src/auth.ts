@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs';
-import { $ } from './utils.js';
+import { $, formatTime } from './utils.js';
 import { state } from './state.js';
 import { playQuack } from './sound.js';
 import { loadProviders } from './api.js';
+import { API_PATHS, STORAGE_KEYS, BCRYPT } from '../../shared/constants.js';
 
 async function sha256Hex(input: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
@@ -10,64 +11,63 @@ async function sha256Hex(input: string): Promise<string> {
 }
 
 export function togglePasswordVis(): void {
-  const i = $('loginPassword') as HTMLInputElement;
-  const s = $('pwEyeShow'), h = $('pwEyeHide');
-  if (i.type === 'password') {
-    i.type = 'text'; s.style.display = 'none'; h.style.display = 'block';
+  const passwordInput = $('loginPassword') as HTMLInputElement;
+  const eyeShow = $('pwEyeShow'), eyeHide = $('pwEyeHide');
+  if (passwordInput.type === 'password') {
+    passwordInput.type = 'text'; eyeShow.style.display = 'none'; eyeHide.style.display = 'block';
   } else {
-    i.type = 'password'; s.style.display = 'block'; h.style.display = 'none';
+    passwordInput.type = 'password'; eyeShow.style.display = 'block'; eyeHide.style.display = 'none';
   }
-  i.focus();
+  passwordInput.focus();
 }
 
 export function startLockoutCountdown(sec: number): void {
   state.clientLockoutUntil = Date.now() + (sec * 1000);
-  localStorage.setItem('tdLockout', String(state.clientLockoutUntil));
+  localStorage.setItem(STORAGE_KEYS.lockout, String(state.clientLockoutUntil));
   updateLockoutUI();
 }
 
 export function updateLockoutUI(): void {
-  const el = $('loginLockout'), btn = $('loginBtn') as HTMLButtonElement, pw = $('loginPassword') as HTMLInputElement;
+  const el = $('loginLockout'), submitBtn = $('loginBtn') as HTMLButtonElement, passwordInput = $('loginPassword') as HTMLInputElement;
   const rem = Math.max(0, Math.ceil((state.clientLockoutUntil - Date.now()) / 1000));
   if (rem > 0) {
-    const m = Math.floor(rem / 60), s = rem % 60;
-    el.textContent = `🔒 Locked — ${m}:${String(s).padStart(2, '0')}`;
+    el.textContent = `🔒 Locked — ${formatTime(rem)}`;
     el.style.display = 'block';
-    btn.disabled = true;
-    pw.disabled = true;
+    submitBtn.disabled = true;
+    passwordInput.disabled = true;
     state.lockoutTimer = setTimeout(updateLockoutUI, 1000);
   } else {
     el.style.display = 'none';
-    btn.disabled = false;
-    pw.disabled = false;
-    localStorage.removeItem('tdLockout');
+    submitBtn.disabled = false;
+    passwordInput.disabled = false;
+    localStorage.removeItem(STORAGE_KEYS.lockout);
     if (state.lockoutTimer) clearTimeout(state.lockoutTimer);
   }
 }
 
 export async function doLogin(): Promise<void> {
-  const pw = ($('loginPassword') as HTMLInputElement).value;
-  const err = $('loginError'), att = $('loginAttempts'), btn = $('loginBtn') as HTMLButtonElement;
-  err.textContent = ''; att.style.display = 'none';
-  if (!pw) { err.textContent = 'Enter a password'; return; }
-  if (pw.length < 8) { err.textContent = 'Min 8 characters'; return; }
+  const password = ($('loginPassword') as HTMLInputElement).value;
+  const errorEl = $('loginError'), attemptsEl = $('loginAttempts'), submitBtn = $('loginBtn') as HTMLButtonElement;
+  errorEl.textContent = ''; attemptsEl.style.display = 'none';
+  if (!password) { errorEl.textContent = 'Enter a password'; return; }
+  if (password.length < 8) { errorEl.textContent = 'Min 8 characters'; return; }
   if (state.clientLockoutUntil > Date.now()) { updateLockoutUI(); return; }
-  btn.disabled = true; btn.textContent = '⏳ Hashing...';
+  submitBtn.disabled = true; submitBtn.textContent = '⏳ Hashing...';
   try {
-    const cr = await fetch('/api/auth/challenge');
+    const cr = await fetch(API_PATHS.challenge);
     if (cr.status === 429) { const d = await cr.json(); startLockoutCountdown(d.lockedFor); return; }
     const { nonce, timestamp, bcryptSalt } = await cr.json();
     const costMatch = bcryptSalt.match(/^\$2[aby]?\$(\d+)\$/);
-    const cost = costMatch ? parseInt(costMatch[1]) : 15;
-    if (cost > 16) {
-      err.textContent = `bcrypt cost ${cost} is too high for browser. Set BCRYPT_COST=15 in .env and re-run hash-password.ts`;
-      btn.disabled = false; btn.textContent = '🔓 Unlock'; return;
+    const cost = costMatch ? parseInt(costMatch[1]) : BCRYPT.minCost;
+    if (cost > BCRYPT.maxCost) {
+      errorEl.textContent = `bcrypt cost ${cost} is too high for browser. Set BCRYPT_COST=${BCRYPT.minCost} in .env and re-run hash-password.ts`;
+      submitBtn.disabled = false; submitBtn.textContent = '🔓 Unlock'; return;
     }
-    const s1 = await sha256Hex(pw);
+    const s1 = await sha256Hex(password);
     const bh = bcrypt.hashSync(s1, bcryptSalt);
     const v = await sha256Hex(bh);
     const proof = await sha256Hex(v + nonce + timestamp);
-    const lr = await fetch('/api/auth/login', {
+    const lr = await fetch(API_PATHS.login, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ proof, timestamp })
@@ -75,31 +75,31 @@ export async function doLogin(): Promise<void> {
     const ld = await lr.json();
     if (lr.status === 429) { startLockoutCountdown(ld.lockedFor); playQuack(); return; }
     if (!lr.ok) {
-      err.textContent = 'Wrong password'; playQuack();
+      errorEl.textContent = 'Wrong password'; playQuack();
       if (ld.attemptsRemaining !== undefined) {
-        att.textContent = ld.attemptsRemaining > 0 ? `${ld.attemptsRemaining} attempt${ld.attemptsRemaining !== 1 ? 's' : ''} left` : 'No attempts left';
-        att.style.display = 'block';
+        attemptsEl.textContent = ld.attemptsRemaining > 0 ? `${ld.attemptsRemaining} attempt${ld.attemptsRemaining !== 1 ? 's' : ''} left` : 'No attempts left';
+        attemptsEl.style.display = 'block';
       }
       return;
     }
     state.authToken = ld.token;
-    localStorage.setItem('tdToken', state.authToken);
-    localStorage.removeItem('tdLockout');
+    localStorage.setItem(STORAGE_KEYS.token, state.authToken);
+    localStorage.removeItem(STORAGE_KEYS.lockout);
     $('loginOverlay').classList.add('hidden');
     await loadProviders();
   } catch (e) {
-    err.textContent = (e as Error).message || 'Connection error';
+    errorEl.textContent = 'Login failed: ' + ((e as Error).message || 'unable to reach server');
   } finally {
-    btn.disabled = false; btn.textContent = '🔓 Unlock';
+    submitBtn.disabled = false; submitBtn.textContent = '🔓 Unlock';
   }
 }
 
 export function renderProviders(): void {
   const bar = $('providerBar');
-  bar.innerHTML = '<span style="font-family:var(--mono);font-size:.65rem;color:var(--text-muted);padding:.3rem 0">AI:</span>';
+  bar.innerHTML = '<span class="provider-label">AI:</span>';
   if (!state.availableProviders.length) { ($('verifyBtn') as HTMLButtonElement).disabled = true; return; }
   const sel = document.createElement('select');
-  sel.style.cssText = 'font-family:var(--mono);font-size:.72rem;padding:.3rem .5rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--yellow);cursor:pointer;outline:none';
+  sel.className = 'provider-select';
   let foundCurrent = false;
   state.availableProviders.forEach((p, i) => {
     const opt = document.createElement('option');
@@ -112,12 +112,12 @@ export function renderProviders(): void {
     sel.selectedIndex = 0;
     const first = state.availableProviders[0];
     state.selectedProvider = first.id; state.selectedModel = first.model;
-    localStorage.setItem('tdProvider', first.id); localStorage.setItem('tdModel', first.model);
+    localStorage.setItem(STORAGE_KEYS.provider, first.id); localStorage.setItem(STORAGE_KEYS.model, first.model);
   }
   sel.onchange = () => {
     const p = state.availableProviders[parseInt(sel.value)];
     state.selectedProvider = p.id; state.selectedModel = p.model;
-    localStorage.setItem('tdProvider', p.id); localStorage.setItem('tdModel', p.model);
+    localStorage.setItem(STORAGE_KEYS.provider, p.id); localStorage.setItem(STORAGE_KEYS.model, p.model);
   };
   bar.appendChild(sel);
   ($('verifyBtn') as HTMLButtonElement).disabled = false;

@@ -1,14 +1,14 @@
-import { $, esc } from './utils.js';
+import { $, esc, scoreColor, scoreClass } from './utils.js';
 import { state } from './state.js';
 import { duckSay } from './duck.js';
-import { getScopeItems } from './scope.js';
-import { addScope } from './scope.js';
-import { initScope, updateTimeSummary } from './scope.js';
+import { getScopeItems, addScope, initScope, updateTimeSummary } from './scope.js';
 import { stopWorkTimer } from './timer.js';
 import { stopCheckpoints } from './checkpoint.js';
 import { activateStep } from './steps.js';
 import { removeDraft } from './draft.js';
 import { ICON } from './icons.js';
+import { gatherFormData, setFormData, clearFormData } from './formData.js';
+import { STORAGE_KEYS } from '../../shared/constants.js';
 
 interface HistoryItem {
   id: number;
@@ -41,33 +41,40 @@ interface HistoryItem {
 }
 
 function getHistory(): HistoryItem[] {
-  try { return JSON.parse(localStorage.getItem('tdHistory') || '[]'); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.history) || '[]');
+  } catch {
+    console.warn('History corrupted, clearing');
+    localStorage.removeItem(STORAGE_KEYS.history);
+    return [];
+  }
 }
 
 function saveHistory(h: HistoryItem[]): void {
-  localStorage.setItem('tdHistory', JSON.stringify(h));
+  localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(h));
 }
 
 export function saveToHistory(score: number, done: number, total: number, extras: number, amends: number): void {
   const h = getHistory();
+  const fields = gatherFormData();
   h.unshift({
     id: Date.now(),
-    taskId: ($('taskIdField') as HTMLInputElement).value,
-    title: ($('taskTitleField') as HTMLInputElement).value,
+    taskId: fields.taskId,
+    title: fields.title,
     date: new Date().toISOString(),
     score, done, total, extras, amends,
-    raw: ($('rawTaskField') as HTMLTextAreaElement).value,
-    ask: ($('askField') as HTMLTextAreaElement).value,
-    deliverable: ($('deliverableField') as HTMLTextAreaElement).value,
-    dod: ($('dodField') as HTMLTextAreaElement).value,
-    notAsked: ($('notAskedField') as HTMLTextAreaElement).value,
-    approach: ($('approachField') as HTMLTextAreaElement).value,
-    peerWho: ($('peerWho') as HTMLTextAreaElement).value,
-    peerSurprise: ($('peerSurprise') as HTMLTextAreaElement).value,
-    parkingLot: ($('parkingLot') as HTMLTextAreaElement).value,
+    raw: fields.raw,
+    ask: fields.ask,
+    deliverable: fields.deliverable,
+    dod: fields.dod,
+    notAsked: fields.notAsked,
+    approach: fields.approach,
+    peerWho: fields.peerWho,
+    peerSurprise: fields.peerSurprise,
+    parkingLot: fields.parkingLot,
     scope: getScopeItems(),
-    storyPoints: ($('storyPointsField') as HTMLInputElement).value,
-    driftReason: ($('driftReason') as HTMLInputElement).value,
+    storyPoints: fields.storyPoints,
+    driftReason: fields.driftReason,
     lastVerdict: state.lastVerdict,
     workTime: state.workTimerSeconds,
     diffItems: state.diffItems,
@@ -85,7 +92,7 @@ export function renderHistory(): void {
   if (!h.length) { el.innerHTML = '<div class="history-empty">No tasks yet.</div>'; renderTrend([]); return; }
   el.innerHTML = h.map((item, i) => {
     const badge = item.status === 'draft' ? '<span class="hi-badge hi-badge-draft">DRAFT</span>' : '<span class="hi-badge hi-badge-done">DONE</span>';
-    const acc = item.status === 'done' ? `<span class="hi-accuracy" style="color:${item.score >= 80 ? 'var(--green)' : item.score >= 50 ? 'var(--orange)' : 'var(--red)'}">${item.score}%</span>` : '';
+    const acc = item.status === 'done' ? `<span class="hi-accuracy ${scoreClass(item.score)}">${item.score}%</span>` : '';
     return `<div class="history-item">
       <div class="hi-id">${esc(item.taskId || 'No ID')}</div>
       <div class="hi-task">${esc(item.title || item.ask?.substring(0, 60) || 'Untitled')}</div>
@@ -104,19 +111,21 @@ export function resumeTask(idx: number): void {
   const h = getHistory(), item = h[idx];
   if (!item) return;
   resetAll(true);
-  ($('taskIdField') as HTMLInputElement).value = item.taskId || '';
-  ($('taskTitleField') as HTMLInputElement).value = item.title || '';
-  ($('rawTaskField') as HTMLTextAreaElement).value = item.raw || '';
-  ($('askField') as HTMLTextAreaElement).value = item.ask || '';
-  ($('deliverableField') as HTMLTextAreaElement).value = item.deliverable || '';
-  ($('dodField') as HTMLTextAreaElement).value = item.dod || '';
-  ($('notAskedField') as HTMLTextAreaElement).value = item.notAsked || '';
-  ($('approachField') as HTMLTextAreaElement).value = item.approach || '';
-  ($('peerWho') as HTMLTextAreaElement).value = item.peerWho || '';
-  ($('peerSurprise') as HTMLTextAreaElement).value = item.peerSurprise || '';
-  ($('parkingLot') as HTMLTextAreaElement).value = item.parkingLot || '';
-  ($('storyPointsField') as HTMLInputElement).value = item.storyPoints || '';
-  ($('driftReason') as HTMLInputElement).value = item.driftReason || '';
+  setFormData({
+    taskId: item.taskId || '',
+    title: item.title || '',
+    raw: item.raw || '',
+    ask: item.ask || '',
+    deliverable: item.deliverable || '',
+    dod: item.dod || '',
+    notAsked: item.notAsked || '',
+    approach: item.approach || '',
+    peerWho: item.peerWho || '',
+    peerSurprise: item.peerSurprise || '',
+    parkingLot: item.parkingLot || '',
+    storyPoints: item.storyPoints || '',
+    driftReason: item.driftReason || '',
+  });
   if (item.scope?.length) {
     $('scopeList').innerHTML = '';
     item.scope.forEach(s => {
@@ -136,9 +145,11 @@ export function cloneTask(idx: number): void {
   const h = getHistory(), item = h[idx];
   if (!item) return;
   resetAll(true);
-  ($('rawTaskField') as HTMLTextAreaElement).value = item.raw || '';
-  ($('deliverableField') as HTMLTextAreaElement).value = item.deliverable || '';
-  ($('notAskedField') as HTMLTextAreaElement).value = item.notAsked || '';
+  setFormData({
+    raw: item.raw || '',
+    deliverable: item.deliverable || '',
+    notAsked: item.notAsked || '',
+  });
   toggleHistory();
   duckSay("Cloned! Rewrite your understanding fresh for this run.");
 }
@@ -160,8 +171,8 @@ function renderTrend(done: HistoryItem[]): void {
   const avgTime = withTime.length ? Math.round(withTime.reduce((a, b) => a + b.workTime, 0) / withTime.length / 60) : 0;
   const totalExtras = recent.reduce((a, b) => a + (b.extras || 0), 0);
   const maxScore = Math.max(...recent.map(x => x.score), 1);
-  const bars = recent.slice().reverse().map(x => `<div class="bar" style="height:${Math.max(4, (x.score / maxScore) * 40)}px;background:${x.score >= 80 ? 'var(--green)' : x.score >= 50 ? 'var(--orange)' : 'var(--red)'}"></div>`).join('');
-  el.innerHTML = `<div class="trend-section"><h4>${ICON.trendingUp} Trends (last ${recent.length} tasks)</h4><div class="trend-row"><div class="trend-stat"><div class="ts-num" style="color:${avgScore >= 80 ? 'var(--green)' : avgScore >= 50 ? 'var(--orange)' : 'var(--red)'}">${avgScore}%</div><div class="ts-lbl">Avg accuracy</div></div><div class="trend-stat"><div class="ts-num" style="color:var(--orange)">${avgTime}m</div><div class="ts-lbl">Avg time</div></div><div class="trend-stat"><div class="ts-num" style="color:var(--purple)">${totalExtras}</div><div class="ts-lbl">Total extras</div></div></div><div class="trend-sparkline">${bars}</div></div>`;
+  const bars = recent.slice().reverse().map(x => `<div class="bar" style="height:${Math.max(4, (x.score / maxScore) * 40)}px;background:${scoreColor(x.score)}"></div>`).join('');
+  el.innerHTML = `<div class="trend-section"><h4>${ICON.trendingUp} Trends (last ${recent.length} tasks)</h4><div class="trend-row"><div class="trend-stat"><div class="ts-num ${scoreClass(avgScore)}">${avgScore}%</div><div class="ts-lbl">Avg accuracy</div></div><div class="trend-stat"><div class="ts-num color--orange">${avgTime}m</div><div class="ts-lbl">Avg time</div></div><div class="trend-stat"><div class="ts-num color--purple">${totalExtras}</div><div class="ts-lbl">Total extras</div></div></div><div class="trend-sparkline">${bars}</div></div>`;
 }
 
 export function toggleHistory(): void {
@@ -170,9 +181,7 @@ export function toggleHistory(): void {
 }
 
 export function resetAll(silent?: boolean): void {
-  ['rawTaskField', 'askField', 'deliverableField', 'dodField', 'notAskedField', 'taskIdField', 'taskTitleField', 'storyPointsField', 'approachField', 'peerWho', 'peerSurprise', 'parkingLot', 'driftReason', 'rescopeJustification'].forEach(id => {
-    ($(id) as HTMLInputElement | HTMLTextAreaElement).value = '';
-  });
+  clearFormData();
   initScope(); updateTimeSummary();
   state.lastVerdict = null; state.verifyAttempts = 0;
   state.extras = []; state.amendments = []; state.diffItems = [];

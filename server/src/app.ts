@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { LIMITS } from '../../shared/constants.js';
 import { securityHeaders } from './middleware/security.js';
 import { corsMiddleware } from './middleware/cors.js';
 import { sanitizerMiddleware } from './middleware/sanitizer.js';
@@ -17,7 +18,7 @@ export function createApp(): express.Express {
   const app = express();
 
   // Body parser
-  app.use(express.json({ limit: '50kb' }));
+  app.use(express.json({ limit: `${LIMITS.bodyMaxKb}kb` }));
 
   // Middleware chain (order matters)
   app.use(securityHeaders);

@@ -14,7 +14,7 @@ const router = Router();
 router.post('/api/rescope', requireAuth, async (req, res) => {
   const { provider, model, original, rewrite, dod, driftSummary, justification, storyPoints } = req.body;
   if (!provider || !original || !rewrite) {
-    res.status(400).json({ error: 'Missing fields' });
+    res.status(400).json({ error: 'Missing fields: need provider, original, and rewrite' });
     return;
   }
   if (!providers[provider]) {
@@ -23,7 +23,7 @@ router.post('/api/rescope', requireAuth, async (req, res) => {
   }
   const key = getProviderKey(provider);
   if (!key) {
-    res.status(400).json({ error: `${provider} not configured` });
+    res.status(400).json({ error: `${provider} not configured — add API key to .env` });
     return;
   }
   try {

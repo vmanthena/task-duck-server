@@ -4,9 +4,14 @@ import { duckSay } from './duck.js';
 import { playQuack } from './sound.js';
 import { scheduleSave } from './draft.js';
 import { ICON, ICON_SM } from './icons.js';
+import { API_PATHS } from '../../shared/constants.js';
 
 const VERIFY_BTN_HTML = `${ICON.checkCircle} Verify`;
 const REVERIFY_BTN_HTML = `${ICON.checkCircle} Re-verify`;
+
+function renderVrSection(title: string, items: string[]): string {
+  return `<div class="vr-section"><div class="vr-section-title">${esc(title)}</div><ul class="vr-items">${items.slice(0, 4).map(i => '<li>' + esc(i) + '</li>').join('')}</ul></div>`;
+}
 
 export async function verifyUnderstanding(): Promise<void> {
   if (!state.selectedProvider || !state.authToken) return;
@@ -19,7 +24,7 @@ export async function verifyUnderstanding(): Promise<void> {
   const spVal = parseInt(($('storyPointsField') as HTMLInputElement).value);
   const storyPoints = isNaN(spVal) ? null : spVal;
   try {
-    const r = await fetch('/api/verify', {
+    const r = await fetch(API_PATHS.verify, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.authToken}` },
       body: JSON.stringify({
@@ -43,12 +48,12 @@ export async function verifyUnderstanding(): Promise<void> {
     state.lastVerdict = p.verdict; state.verifyAttempts++;
     let html = `<div class="vr-header"><span class="vr-verdict vr-verdict-${p.verdict}">${p.verdict}</span><span class="vr-confidence">${Math.round((p.confidence || 0) * 100)}%</span></div>`;
     html += `<div class="vr-summary">${esc(p.summary || '')}</div>`;
-    if (p.scope_drift?.detected) html += `<div class="vr-section"><div class="vr-section-title">Scope Drift</div><ul class="vr-items">${(p.scope_drift.items || []).slice(0, 4).map((i: string) => '<li>' + esc(i) + '</li>').join('')}</ul></div>`;
-    if (p.missing_items?.detected) html += `<div class="vr-section"><div class="vr-section-title">Missing from Original</div><ul class="vr-items">${(p.missing_items.items || []).slice(0, 4).map((i: string) => '<li>' + esc(i) + '</li>').join('')}</ul></div>`;
-    if (p.assumptions?.detected) html += `<div class="vr-section"><div class="vr-section-title">Assumptions</div><ul class="vr-items">${(p.assumptions.items || []).slice(0, 4).map((i: string) => '<li>' + esc(i) + '</li>').join('')}</ul></div>`;
+    if (p.scope_drift?.detected) html += renderVrSection('Scope Drift', p.scope_drift.items || []);
+    if (p.missing_items?.detected) html += renderVrSection('Missing from Original', p.missing_items.items || []);
+    if (p.assumptions?.detected) html += renderVrSection('Assumptions', p.assumptions.items || []);
     if (p.definition_of_done && !p.definition_of_done.clear) html += `<div class="vr-section"><div class="vr-section-title">Definition of Done</div><p style="font-size:.82rem">${esc(p.definition_of_done.suggestion || 'Make it specific and testable')}</p></div>`;
-    if (p.spelling_grammar?.issues?.length) html += `<div class="vr-section"><div class="vr-section-title">Spelling/Grammar</div><ul class="vr-items">${p.spelling_grammar.issues.slice(0, 4).map((i: string) => '<li>' + esc(i) + '</li>').join('')}</ul></div>`;
-    if (p.suggestions?.length) html += `<div class="vr-section"><div class="vr-section-title">Suggestions</div><ul class="vr-items">${p.suggestions.slice(0, 4).map((i: string) => '<li>' + esc(i) + '</li>').join('')}</ul></div>`;
+    if (p.spelling_grammar?.issues?.length) html += renderVrSection('Spelling/Grammar', p.spelling_grammar.issues);
+    if (p.suggestions?.length) html += renderVrSection('Suggestions', p.suggestions);
     if (p.story_points) {
       const sp = p.story_points;
       const badge = sp.bloated
@@ -105,7 +110,7 @@ export async function requestRescope(): Promise<void> {
   const spVal = parseInt(($('storyPointsField') as HTMLInputElement).value);
   const storyPoints = isNaN(spVal) ? null : spVal;
   try {
-    const r = await fetch('/api/rescope', {
+    const r = await fetch(API_PATHS.rescope, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.authToken}` },
       body: JSON.stringify({

@@ -1,4 +1,5 @@
 import type { RequestHandler } from 'express';
+import { LIMITS } from '../../../shared/constants.js';
 
 function sanitize(str: string): string {
   if (typeof str !== 'string') return '';
@@ -7,7 +8,7 @@ function sanitize(str: string): string {
     .replace(/javascript:/gi, '')
     .replace(/on\w+\s*=/gi, '')
     .replace(/data:/gi, '')
-    .substring(0, 10000);
+    .substring(0, LIMITS.stringMaxLen);
 }
 
 function sanitizeBody(obj: Record<string, unknown>): Record<string, unknown> {

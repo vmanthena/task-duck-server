@@ -1,15 +1,16 @@
 import { ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_MODEL, GEMINI_MODEL, OLLAMA_BASE_URL, OLLAMA_MODEL, ollamaAvailable } from '../config.js';
 import type { LLMCallFn } from '../types.js';
 import { createLogger } from '../../../shared/logger.js';
+import { LIMITS, RETRY } from '../../../shared/constants.js';
 
 const log = createLogger('llm');
-const MAX_TOKENS = 16384;
+
 // Retry helper — backs off on 429/529 (overloaded)
-async function fetchWithRetry(url: string, opts: RequestInit, retries = 3): Promise<Response> {
+async function fetchWithRetry(url: string, opts: RequestInit, retries = RETRY.attempts): Promise<Response> {
   for (let i = 0; i < retries; i++) {
     const r = await fetch(url, opts);
     if (r.status === 429 || r.status === 529) {
-      const wait = Math.min(2000 * Math.pow(2, i), 15000);
+      const wait = Math.min(RETRY.baseMs * Math.pow(2, i), RETRY.maxMs);
       log.warn(`${r.status} — waiting ${wait}ms (attempt ${i + 1}/${retries})`);
       await new Promise(res => setTimeout(res, wait));
       continue;
@@ -19,23 +20,24 @@ async function fetchWithRetry(url: string, opts: RequestInit, retries = 3): Prom
   return fetch(url, opts);
 }
 
+function throwProviderError(provider: string, status: number, text: string): never {
+  try {
+    const d = JSON.parse(text);
+    throw new Error(`${provider} (${status}): ${d.error?.message || text.substring(0, 200)}`);
+  } catch (e) {
+    if ((e as Error).message.startsWith(provider)) throw e;
+    throw new Error(`${provider} (${status}): ${text.substring(0, 200)}`);
+  }
+}
+
 const callAnthropic: LLMCallFn = async (s, u, modelOverride) => {
   const useModel = modelOverride || ANTHROPIC_MODEL;
   const r = await fetchWithRetry('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: useModel, max_tokens: MAX_TOKENS, system: s, messages: [{ role: 'user', content: u }] })
+    body: JSON.stringify({ model: useModel, max_tokens: LIMITS.llmMaxTokens, system: s, messages: [{ role: 'user', content: u }] })
   });
-  if (!r.ok) {
-    const text = await r.text();
-    try {
-      const d = JSON.parse(text);
-      throw new Error(`Anthropic (${r.status}): ${d.error?.message || text.substring(0, 200)}`);
-    } catch (e) {
-      if ((e as Error).message.startsWith('Anthropic')) throw e;
-      throw new Error(`Anthropic (${r.status}): ${text.substring(0, 200)}`);
-    }
-  }
+  if (!r.ok) throwProviderError('Anthropic', r.status, await r.text());
   const d = await r.json();
   return d.content?.[0]?.text || '';
 };
@@ -44,18 +46,9 @@ const callOpenAI: LLMCallFn = async (s, u, _model) => {
   const r = await fetchWithRetry('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
-    body: JSON.stringify({ model: 'gpt-4o', max_tokens: MAX_TOKENS, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: s }, { role: 'user', content: u }] })
+    body: JSON.stringify({ model: 'gpt-4o', max_tokens: LIMITS.llmMaxTokens, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: s }, { role: 'user', content: u }] })
   });
-  if (!r.ok) {
-    const text = await r.text();
-    try {
-      const d = JSON.parse(text);
-      throw new Error(`OpenAI (${r.status}): ${d.error?.message || text.substring(0, 200)}`);
-    } catch (e) {
-      if ((e as Error).message.startsWith('OpenAI')) throw e;
-      throw new Error(`OpenAI (${r.status}): ${text.substring(0, 200)}`);
-    }
-  }
+  if (!r.ok) throwProviderError('OpenAI', r.status, await r.text());
   const d = await r.json();
   return d.choices?.[0]?.message?.content || '';
 };
@@ -68,13 +61,10 @@ const callGemini: LLMCallFn = async (s, u, _model) => {
     body: JSON.stringify({
       system_instruction: { parts: [{ text: s }] },
       contents: [{ parts: [{ text: u }] }],
-      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: MAX_TOKENS }
+      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: LIMITS.llmMaxTokens }
     })
   });
-  if (!r.ok) {
-    const text = await r.text();
-    throw new Error(`Gemini (${r.status}): ${text.substring(0, 300)}`);
-  }
+  if (!r.ok) throwProviderError('Gemini', r.status, await r.text());
   const d = await r.json();
   if (d.error) throw new Error(`Gemini: ${d.error.message}`);
   return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -85,18 +75,9 @@ const callOllama: LLMCallFn = async (s, u, modelOverride) => {
   const r = await fetchWithRetry(`${OLLAMA_BASE_URL}/v1/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: useModel, max_tokens: MAX_TOKENS, messages: [{ role: 'system', content: s }, { role: 'user', content: u }] })
+    body: JSON.stringify({ model: useModel, max_tokens: LIMITS.llmMaxTokens, messages: [{ role: 'system', content: s }, { role: 'user', content: u }] })
   });
-  if (!r.ok) {
-    const text = await r.text();
-    try {
-      const d = JSON.parse(text);
-      throw new Error(`Ollama (${r.status}): ${d.error?.message || text.substring(0, 200)}`);
-    } catch (e) {
-      if ((e as Error).message.startsWith('Ollama')) throw e;
-      throw new Error(`Ollama (${r.status}): ${text.substring(0, 200)}`);
-    }
-  }
+  if (!r.ok) throwProviderError('Ollama', r.status, await r.text());
   const d = await r.json();
   return d.choices?.[0]?.message?.content || '';
 };

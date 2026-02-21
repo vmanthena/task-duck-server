@@ -1,5 +1,6 @@
 import type { Request } from 'express';
 import { createLogger } from '../../../shared/logger.js';
+import { AUTH } from '../../../shared/constants.js';
 
 const log = createLogger('auth');
 
@@ -9,8 +10,6 @@ interface AttemptRecord {
 }
 
 const loginAttempts = new Map<string, AttemptRecord>();
-const MAX_ATTEMPTS = 3;
-const LOCKOUT_MS = 20 * 60 * 1000;
 
 export function getClientIP(req: Request): string {
   const forwarded = req.headers['x-forwarded-for'];
@@ -31,8 +30,8 @@ export function isIPLocked(ip: string): boolean {
 export function recordFail(ip: string): AttemptRecord {
   const r = loginAttempts.get(ip) || { count: 0, lockedUntil: null };
   r.count++;
-  if (r.count >= MAX_ATTEMPTS) {
-    r.lockedUntil = Date.now() + LOCKOUT_MS;
+  if (r.count >= AUTH.maxAttempts) {
+    r.lockedUntil = Date.now() + AUTH.lockoutMs;
     log.warn(`IP ${ip} locked 20min (${r.count} fails)`);
   }
   loginAttempts.set(ip, r);
