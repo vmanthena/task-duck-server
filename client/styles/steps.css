@@ -1,0 +1,98 @@
+.step {
+  animation: fadeUp 0.5s ease both;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.step-number {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 2px solid var(--border);
+  color: var(--text-dim);
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.step.active .step-number {
+  border-color: var(--yellow);
+  color: var(--yellow);
+  box-shadow: 0 0 12px var(--yellow-dim);
+}
+
+.step.completed .step-number {
+  border-color: var(--green);
+  background: var(--green);
+  color: var(--bg);
+}
+
+.step.completed .step-number::after {
+  content: '✓';
+}
+
+.step.completed .step-number span {
+  display: none;
+}
+
+.step-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.step-tag {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.step-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.3s;
+  opacity: 0;
+  padding-left: 3rem;
+}
+
+.step.active .step-body,
+.step.reopened .step-body {
+  max-height: 5000px;
+  opacity: 1;
+}
+
+.step-connector {
+  width: 2px;
+  height: 16px;
+  background: var(--border);
+  margin-left: 16px;
+  transition: background 0.3s;
+}
+
+.step.completed + .step-connector {
+  background: var(--green);
+}
+
+.step-actions {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}

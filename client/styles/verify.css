@@ -1,0 +1,272 @@
+.verify-result {
+  margin-top: 0.85rem;
+  padding: 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  display: none;
+}
+
+.verify-result.visible {
+  display: block;
+}
+
+.verify-result.verdict-match {
+  border-color: var(--green);
+  background: var(--green-dim);
+}
+
+.verify-result.verdict-drift {
+  border-color: var(--orange);
+  background: var(--orange-dim);
+}
+
+.verify-result.verdict-missing {
+  border-color: var(--blue);
+  background: var(--blue-dim);
+}
+
+.verify-result.verdict-major_mismatch {
+  border-color: var(--red);
+  background: var(--red-dim);
+}
+
+.vr-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.vr-verdict {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.vr-verdict-match {
+  background: var(--green);
+  color: var(--bg);
+}
+
+.vr-verdict-drift {
+  background: var(--orange);
+  color: var(--bg);
+}
+
+.vr-verdict-missing {
+  background: var(--blue);
+  color: #fff;
+}
+
+.vr-verdict-major_mismatch {
+  background: var(--red);
+  color: #fff;
+}
+
+.vr-confidence {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+}
+
+.vr-summary {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+
+.vr-section {
+  margin-bottom: 0.4rem;
+}
+
+.vr-section-title {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.2rem;
+}
+
+.vr-items {
+  font-size: 0.82rem;
+  padding-left: 1rem;
+}
+
+.vr-items li {
+  margin-bottom: 0.15rem;
+}
+
+.vr-duck-quote {
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--yellow);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.vr-masking {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+}
+
+.verify-loading {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--yellow);
+  margin-top: 0.5rem;
+}
+
+.verify-loading.active {
+  display: flex;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--yellow);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.drift-override {
+  margin-top: 0.65rem;
+  padding: 0.65rem;
+  background: var(--orange-dim);
+  border: 1px solid var(--orange);
+  border-radius: 10px;
+  display: none;
+}
+
+.drift-override.visible {
+  display: block;
+}
+
+.drift-override label {
+  color: var(--orange) !important;
+}
+
+.rescope-loading {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--blue);
+  margin-top: 0.5rem;
+}
+
+.rescope-loading.active {
+  display: flex;
+}
+
+.rescope-section {
+  display: none;
+  margin-top: 0.65rem;
+  padding: 0.85rem;
+  background: var(--blue-dim);
+  border: 1px solid var(--blue);
+  border-radius: 12px;
+}
+
+.rescope-section.visible {
+  display: block;
+}
+
+.rescope-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.rescope-header .dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.rescope-changes {
+  margin-bottom: 0.6rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.rescope-changes li {
+  margin-bottom: 0.2rem;
+  color: var(--text-dim);
+  list-style: none;
+  padding-left: 0.8rem;
+  position: relative;
+}
+
+.rescope-changes li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--blue);
+}
+
+.rescope-field {
+  margin-bottom: 0.5rem;
+}
+
+.rescope-field label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--blue);
+  margin-bottom: 0.25rem;
+}
+
+.rescope-field textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  min-height: 60px;
+}
+
+.rescope-apply {
+  margin-top: 0.25rem;
+  border-color: var(--blue) !important;
+  color: var(--blue) !important;
+}
+
+.rescope-apply:hover {
+  background: var(--blue-dim) !important;
+}
+
+.rescope-duck {
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--blue);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}

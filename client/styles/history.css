@@ -1,0 +1,183 @@
+.history-panel {
+  position: fixed;
+  top: 0;
+  right: -400px;
+  width: 380px;
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 200;
+  transition: right 0.35s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.history-panel.open {
+  right: 0;
+}
+
+.history-panel-header {
+  padding: 1.1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.history-panel-header h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.history-panel-header button {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.85rem;
+}
+
+.history-item {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 0.65rem;
+}
+
+.history-item:hover {
+  border-color: var(--text-muted);
+}
+
+.history-item .hi-id {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--yellow);
+}
+
+.history-item .hi-task {
+  font-size: 0.82rem;
+  font-weight: 500;
+  margin-bottom: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-item .hi-meta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.history-item .hi-date {
+  font-family: var(--mono);
+  font-size: 0.63rem;
+  color: var(--text-muted);
+}
+
+.history-item .hi-badge {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+.hi-badge-draft {
+  background: var(--orange-dim);
+  color: var(--orange);
+}
+
+.hi-badge-done {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.history-item .hi-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.history-item .hi-actions button {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.history-item .hi-actions button:hover {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+.history-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  padding: 2rem;
+}
+
+.trend-section {
+  padding: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 0.65rem 0.85rem;
+}
+
+.trend-section h4 {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+.trend-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.trend-stat {
+  flex: 1;
+  min-width: 80px;
+  text-align: center;
+}
+
+.trend-stat .ts-num {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.trend-stat .ts-lbl {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+.trend-sparkline {
+  height: 40px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  margin-top: 0.5rem;
+}
+
+.trend-sparkline .bar {
+  flex: 1;
+  background: var(--green);
+  border-radius: 2px 2px 0 0;
+  min-width: 4px;
+}

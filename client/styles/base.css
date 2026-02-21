@@ -1,0 +1,90 @@
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #222633;
+  --border: #2a2e3b;
+  --yellow: #f5c542;
+  --yellow-dim: #f5c54233;
+  --yellow-glow: #f5c54266;
+  --red: #e85d5d;
+  --red-dim: #e85d5d22;
+  --green: #4ecb71;
+  --green-dim: #4ecb7122;
+  --blue: #5b9cf5;
+  --blue-dim: #5b9cf522;
+  --orange: #e8943d;
+  --orange-dim: #e8943d22;
+  --purple: #a78bfa;
+  --purple-dim: #a78bfa22;
+  --text: #e8e6e1;
+  --text-dim: #8b8a87;
+  --text-muted: #5a5957;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Outfit', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.15;
+  z-index: -1;
+}
+
+.app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px var(--bg) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+#printSheet {
+  display: none;
+}
+
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes quack {
+  0%, 100% { transform: scale(1) rotate(0); }
+  25% { transform: scale(1.15) rotate(-8deg); }
+  50% { transform: scale(1.05) rotate(4deg); }
+  75% { transform: scale(1.1) rotate(-3deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -1,0 +1,58 @@
+.completion {
+  text-align: center;
+  padding: 2rem 1rem;
+  display: none;
+}
+
+.completion.visible {
+  display: block;
+}
+
+.completion .big-duck {
+  font-size: 3.5rem;
+  margin-bottom: 0.75rem;
+  animation: float 2s ease-in-out infinite;
+}
+
+.completion h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+  color: var(--green);
+}
+
+.accuracy-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.accuracy-card .acc-label {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.accuracy-card .acc-score {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0.2rem 0;
+}
+
+.accuracy-card .acc-detail {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.completion-actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}

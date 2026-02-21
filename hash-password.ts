@@ -6,40 +6,26 @@
  * Chain: sha256(password) → bcrypt(sha256, salt, cost) → sha256 = verifier
  *
  * Usage:
- *   node hash-password.js                  Interactive
- *   node hash-password.js "password"       Direct
- *   node hash-password.js --gen-salt       Generate a new bcrypt salt
- *   node hash-password.js --verify "pw"    Verify against env
+ *   npx tsx hash-password.ts                  Interactive
+ *   npx tsx hash-password.ts "password"       Direct
+ *   npx tsx hash-password.ts --gen-salt       Generate a new bcrypt salt
+ *   npx tsx hash-password.ts --verify "pw"    Verify against env
  */
 import 'dotenv/config';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { stdin, stdout } from 'process';
 
-const BCRYPT_COST = parseInt(process.env.BCRYPT_COST || '12');
+const BCRYPT_COST: number = Math.max(15, Math.min(parseInt(process.env.BCRYPT_COST || '15'), 16));
 
-// ============================================================
-// HASH CHAIN
-// sha256(password) → bcrypt(result, salt, cost) → sha256 = verifier
-// ============================================================
-function computeVerifier(password, salt) {
-  // Step 1: sha256(password) → hex
+function computeVerifier(password: string, salt: string): { sha256Pass: string; bcryptHash: string; verifier: string } {
   const sha256Pass = crypto.createHash('sha256').update(password).digest('hex');
-
-  // Step 2: bcrypt(sha256Pass, salt) → bcrypt hash string
-  // bcryptjs.hashSync uses the provided salt (which embeds the cost)
   const bcryptHash = bcrypt.hashSync(sha256Pass, salt);
-
-  // Step 3: sha256(bcryptHash) → hex = verifier
   const verifier = crypto.createHash('sha256').update(bcryptHash).digest('hex');
-
   return { sha256Pass, bcryptHash, verifier };
 }
 
-// ============================================================
-// INTERACTIVE INPUT
-// ============================================================
-function prompt(label = 'Enter password: ') {
+function prompt(label = 'Enter password: '): Promise<string> {
   return new Promise(resolve => {
     stdout.write(label);
     let pw = '';
@@ -47,12 +33,12 @@ function prompt(label = 'Enter password: ') {
       stdin.setRawMode(true);
       stdin.resume();
       stdin.setEncoding('utf8');
-      const handler = (ch) => {
+      const handler = (ch: string) => {
         if (ch === '\n' || ch === '\r' || ch === '\u0004') {
-          stdin.setRawMode(false); stdin.pause(); stdin.removeListener('data', handler);
+          stdin.setRawMode!(false); stdin.pause(); stdin.removeListener('data', handler);
           stdout.write('\n'); resolve(pw);
         } else if (ch === '\u007F' || ch === '\b') {
-          if (pw.length) { pw = pw.slice(0,-1); stdout.write('\b \b'); }
+          if (pw.length) { pw = pw.slice(0, -1); stdout.write('\b \b'); }
         } else if (ch === '\u0003') { process.exit(0); }
         else { pw += ch; stdout.write('•'); }
       };
@@ -60,34 +46,30 @@ function prompt(label = 'Enter password: ') {
     } else {
       let d = '';
       stdin.resume(); stdin.setEncoding('utf8');
-      stdin.on('data', c => d += c);
+      stdin.on('data', (c: string) => d += c);
       stdin.on('end', () => resolve(d.trim()));
     }
   });
 }
 
-// ============================================================
-// CLI
-// ============================================================
-async function main() {
+async function main(): Promise<void> {
   const args = process.argv.slice(2);
 
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`
 🦆 Task Duck — Password Hash Generator (bcrypt)
 
-Chain: sha256(password) → bcrypt(cost ${BCRYPT_COST}) → sha256 = verifier
+Chain: sha256(password) → bcrypt(cost ${BCRYPT_COST}, min 15) → sha256 = verifier
 
 Usage:
-  node hash-password.js                  Interactive (hidden input)
-  node hash-password.js "password"       Direct
-  node hash-password.js --gen-salt       Generate a bcrypt salt only
-  node hash-password.js --verify "pw"    Check against PASSWORD_VERIFIER env
+  npx tsx hash-password.ts                  Interactive (hidden input)
+  npx tsx hash-password.ts "password"       Direct
+  npx tsx hash-password.ts --gen-salt       Generate a bcrypt salt only
+  npx tsx hash-password.ts --verify "pw"    Check against PASSWORD_VERIFIER env
 `);
     process.exit(0);
   }
 
-  // Generate salt only
   if (args.includes('--gen-salt')) {
     const salt = bcrypt.genSaltSync(BCRYPT_COST);
     console.log(`\nBCRYPT_SALT=${salt}\n`);
@@ -96,7 +78,6 @@ Usage:
     process.exit(0);
   }
 
-  // Get or generate salt
   let salt = process.env.BCRYPT_SALT;
   if (!salt) {
     console.log('\nNo BCRYPT_SALT found — generating a new one...');
@@ -104,8 +85,7 @@ Usage:
     console.log(`Generated: ${salt}\n`);
   }
 
-  // Get password
-  let password;
+  let password: string;
   const positional = args.filter(a => !a.startsWith('--'));
   if (positional.length) {
     password = positional[0];
@@ -119,7 +99,6 @@ Usage:
 
   if (password.length < 8) { console.error('\n❌ Minimum 8 characters.'); process.exit(1); }
 
-  // Verify mode
   if (args.includes('--verify')) {
     const envV = process.env.PASSWORD_VERIFIER;
     if (!envV) { console.error('❌ PASSWORD_VERIFIER not in env'); process.exit(1); }
@@ -134,8 +113,8 @@ Usage:
   const line = '━'.repeat(70);
   console.log(line);
   console.log('Chain:');
-  console.log(`  sha256(pw)       = ${sha256Pass.substring(0,20)}...`);
-  console.log(`  bcrypt(sha256)   = ${bcryptHash.substring(0,30)}...`);
+  console.log(`  sha256(pw)       = ${sha256Pass.substring(0, 20)}...`);
+  console.log(`  bcrypt(sha256)   = ${bcryptHash.substring(0, 30)}...`);
   console.log(`  sha256(bcrypt)   = ${verifier}`);
   console.log(line);
   console.log('\nAdd these to your .env file:\n');

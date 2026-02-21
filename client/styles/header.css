@@ -1,0 +1,164 @@
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+  animation: fadeDown 0.6s ease;
+}
+
+.header h1 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.2rem;
+}
+
+.header h1 span.y {
+  color: var(--yellow);
+}
+
+.header h1 span.v {
+  font-size: 0.5em;
+  color: var(--text-muted);
+}
+
+.header p {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  font-weight: 300;
+}
+
+.header .shortcuts-hint {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+}
+
+.header .shortcuts-hint kbd {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+}
+
+.duck-zone {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem;
+  margin-bottom: 2rem;
+  animation: fadeUp 0.5s ease 0.1s both;
+  position: relative;
+  overflow: hidden;
+}
+
+.duck-zone::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -30%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, var(--yellow-dim) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.duck-avatar {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  background: var(--yellow-dim);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative;
+  z-index: 1;
+  user-select: none;
+}
+
+.duck-avatar:hover {
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: 0 0 20px var(--yellow-glow);
+}
+
+.duck-avatar.quack {
+  animation: quack 0.4s ease;
+}
+
+.duck-speech {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.duck-speech .label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--yellow);
+  margin-bottom: 0.35rem;
+}
+
+.duck-speech p {
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.sound-toggle,
+.history-toggle {
+  position: fixed;
+  top: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.4rem 0.7rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  z-index: 50;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  user-select: none;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+}
+
+.sound-toggle {
+  left: 1rem;
+}
+
+.history-toggle {
+  right: 1rem;
+}
+
+.sound-toggle:hover,
+.history-toggle:hover {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+.autosave-indicator {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.autosave-indicator.show {
+  opacity: 1;
+}
