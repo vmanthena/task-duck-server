@@ -1,6 +1,15 @@
 node_modules
-.env
+dist
 .git
+.env
+.env.*
 *.md
 .dockerignore
-dist
+.vscode
+.cursor
+tests
+test-tasks.txt
+docker-compose*.yml
+coverage
+vitest.config.*
+CLAUDE.md
