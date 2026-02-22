@@ -31,12 +31,6 @@ export function initShortcuts(): void {
       if (state.currentStep > 1) goBack(state.currentStep - 1);
     }
 
-    // Show keyboard hints while Alt is held
-    if (e.key === 'Alt') document.body.classList.add('kb-hints-visible');
-  });
-
-  document.addEventListener('keyup', e => {
-    if (e.key === 'Alt') document.body.classList.remove('kb-hints-visible');
   });
 
   // Auto-save on any input

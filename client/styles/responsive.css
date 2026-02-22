@@ -102,7 +102,6 @@
   .checkpoint-overlay,
   .md-overlay,
   .autosave-indicator,
-  #onboardTooltip,
   .toast-copied {
     display: none !important;
   }

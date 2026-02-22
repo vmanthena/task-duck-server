@@ -37,9 +37,6 @@
 <!-- CREEP ALERT -->
 <div class="creep-alert" id="creepAlert"><div class="duck-mini">🦆</div><p id="creepMessage">Quack!</p><button class="dismiss" onclick="hideCreep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
 
-<!-- ONBOARDING -->
-<div id="onboardTooltip"></div>
-
 <!-- TOAST -->
 <div class="toast-copied" id="toastCopied">Summary copied to clipboard!</div>
 
@@ -57,7 +54,7 @@
   <div id="stepsContainer">
     <!-- STEP 1: READ & REWRITE -->
     <div class="step active" id="step1">
-      <div class="step-header" onclick="reopenStep(1)"><div class="step-number"><span>1</span></div><div class="step-title">Read & Rewrite</div><span class="kb-hint">Alt+1</span><div class="step-tag step-tag--understand">understand</div></div>
+      <div class="step-header" onclick="reopenStep(1)"><div class="step-number"><span>1</span></div><div class="step-title">Read & Rewrite</div><div class="step-tag step-tag--understand">understand</div></div>
       <div class="step-body">
         <div class="field-row field-row-3 field-row--spaced"><div class="field field--flush"><label>Task ID</label><input type="text" id="taskIdField" placeholder="JIRA-1234..." autocomplete="off" spellcheck="false"></div><div class="field field--flush"><label>Title</label><input type="text" id="taskTitleField" placeholder="Short title..." autocomplete="off"></div><div class="field field--flush"><label>Story Points</label><input type="number" id="storyPointsField" placeholder="SP" min="0" max="100" oninput="updateTimeSummary()"></div></div>
         <div class="compare-zone"><div class="field field--flush"><label>Raw Task <span class="badge badge-original">original</span></label><textarea class="tall" id="rawTaskField" placeholder="Paste the original ticket verbatim..."></textarea></div><div class="field field--flush"><label>Your Understanding <span class="badge badge-yours">rewrite</span></label><textarea class="tall" id="askField" placeholder="Rewrite: what is ACTUALLY being asked?"></textarea></div></div>
@@ -94,7 +91,7 @@
 
     <!-- STEP 2: PLAN & FENCE -->
     <div class="step" id="step2">
-      <div class="step-header" onclick="reopenStep(2)"><div class="step-number"><span>2</span></div><div class="step-title">Plan & Fence</div><span class="kb-hint">Alt+2</span><div class="step-tag step-tag--constrain">constrain</div></div>
+      <div class="step-header" onclick="reopenStep(2)"><div class="step-number"><span>2</span></div><div class="step-title">Plan & Fence</div><div class="step-tag step-tag--constrain">constrain</div></div>
       <div class="step-body">
         <div class="field"><label>Scope Items (3–5) — estimate minutes</label>
           <select class="scope-template-select" id="scopeTemplateSelect" onchange="if(this.value)applyTemplate(this.value)"><option value="">Load template...</option><option value="Bug Fix">Bug Fix</option><option value="Feature">Feature</option><option value="Refactor">Refactor</option><option value="Spike">Spike</option></select>
@@ -113,7 +110,7 @@
 
     <!-- STEP 3: EXECUTE -->
     <div class="step" id="step3">
-      <div class="step-header" onclick="reopenStep(3)"><div class="step-number"><span>3</span></div><div class="step-title">Execute</div><span class="kb-hint">Alt+3</span><div class="step-tag step-tag--work">do the work</div></div>
+      <div class="step-header" onclick="reopenStep(3)"><div class="step-number"><span>3</span></div><div class="step-title">Execute</div><div class="step-tag step-tag--work">do the work</div></div>
       <div class="step-body">
         <div class="diff-section"><h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg> Diff Tracker — Planned vs Actual</h4><div id="diffList"></div>
           <div class="diff-add-extra"><input type="text" id="extraWorkInput" placeholder="Unplanned extra work..."><button class="btn btn-ghost btn-sm" onclick="addExtra()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Extra</button></div>
@@ -127,7 +124,7 @@
 
     <!-- STEP 4: PRE-PUSH CHECK -->
     <div class="step" id="step4">
-      <div class="step-header" onclick="reopenStep(4)"><div class="step-number"><span>4</span></div><div class="step-title">Pre-Push Check</div><span class="kb-hint">Alt+4</span><div class="step-tag step-tag--verify">verify</div></div>
+      <div class="step-header" onclick="reopenStep(4)"><div class="step-number"><span>4</span></div><div class="step-title">Pre-Push Check</div><div class="step-tag step-tag--verify">verify</div></div>
       <div class="step-body">
         <div class="diff-summary-card" id="diffSummaryCard" style="display:none"></div>
         <div id="checkQuestions"></div>

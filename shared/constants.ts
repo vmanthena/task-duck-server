@@ -55,7 +55,6 @@ export const STORAGE_KEYS = {
   draft: 'tdDraft',
   history: 'tdHistory',
   sound: 'tdSound',
-  onboarded: 'tdOnboarded',
   streak: 'tdStreak',
   lastTaskDate: 'tdLastTaskDate',
   theme: 'tdTheme',

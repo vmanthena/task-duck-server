@@ -19,7 +19,6 @@ import { loadDraft } from './draft.js';
 import { printPlan, printFinal, exportMarkdown, closeMd, copyMd, copyShipSummary } from './export.js';
 import { initShortcuts } from './shortcuts.js';
 import { state } from './state.js';
-import { initOnboarding, dismissTooltip } from './onboarding.js';
 import { applyTheme, toggleTheme } from './theme.js';
 
 // Window bridge — expose all functions used by inline onclick handlers
@@ -61,7 +60,6 @@ w.printFinal = printFinal;
 w.exportMarkdown = exportMarkdown;
 w.closeMd = closeMd;
 w.copyMd = copyMd;
-w.dismissTooltip = dismissTooltip;
 w.toggleVhEntry = toggleVhEntry;
 w.applyTemplate = applyTemplate;
 w.toggleCompareMode = toggleCompareMode;
@@ -75,7 +73,6 @@ applyTheme();
 updateSoundUI();
 initScope();
 initShortcuts();
-initOnboarding();
 
 // Check lockout
 if (state.clientLockoutUntil > Date.now()) updateLockoutUI();

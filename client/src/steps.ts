@@ -8,8 +8,6 @@ import { startWorkTimer, stopWorkTimer, pauseWorkTimer } from './timer.js';
 import { startCheckpoints, stopCheckpoints } from './checkpoint.js';
 import { buildCheckQuestions } from './checks.js';
 import { scheduleSave } from './draft.js';
-import { onboardNextStep } from './onboarding.js';
-
 export function activateStep(n: number): void {
   state.currentStep = n;
   for (let i = 1; i <= 4; i++) {
@@ -21,11 +19,6 @@ export function activateStep(n: number): void {
     else s.classList.remove('completed');
   }
   scheduleSave();
-  // Scroll new step into view after transition
-  setTimeout(() => {
-    const el = $('step' + n);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 100);
 }
 
 export function reopenStep(n: number): void {
@@ -65,18 +58,15 @@ export function completeStep(n: number): void {
     }
     activateStep(2);
     duckSay("Good. Now set your fence — what EXACTLY will you do?");
-    onboardNextStep(2);
   } else if (n === 2) {
     const items = getScopeItems();
     if (items.length < 1) { duckSay("Add at least one scope item before starting work."); playQuack(); return; }
     state.totalPlannedMinutes = items.reduce((a, b) => a + b.minutes, 0);
     activateStep(3); buildDiffTracker(); startWorkTimer(); startCheckpoints();
     duckSay("Timer started. Stay inside the fence. I'll check in every 30 min.");
-    onboardNextStep(3);
   } else if (n === 3) {
     stopWorkTimer(); stopCheckpoints(); activateStep(4); buildCheckQuestions();
     duckSay("Done? Let's verify before you push.");
-    onboardNextStep(4);
   }
 }
 

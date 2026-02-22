@@ -42,7 +42,6 @@ export const state = {
   soundEnabled: localStorage.getItem(STORAGE_KEYS.sound) === 'true',
   clientLockoutUntil: parseInt(localStorage.getItem(STORAGE_KEYS.lockout) ?? '0'),
   lockoutTimer: null as ReturnType<typeof setTimeout> | null,
-  onboarded: localStorage.getItem(STORAGE_KEYS.onboarded) === 'true',
   verificationHistory: [] as VerificationHistoryEntry[],
   totalPlannedMinutes: 0,
   compareMode: false,
