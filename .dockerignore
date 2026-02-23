@@ -13,3 +13,4 @@ docker-compose*.yml
 coverage
 vitest.config.*
 CLAUDE.md
+docker-build.sh

@@ -180,7 +180,39 @@ docker compose up -d
 docker compose -f docker-compose.build.yml up -d --build
 ```
 
-The Dockerfile uses a multi-stage build: Stage 1 builds with devDependencies, Stage 2 copies only `dist/` and runtime deps. Final image runs as non-root user with a health check.
+The Dockerfile uses a multi-stage build with two image variants selectable via `--target`:
+
+| Target | Tag | Size | Notes |
+|---|---|---|---|
+| `production` | `task-duck:latest` | ~104 MB | Uncompressed Bun — AV/enterprise-scanner compatible |
+| `upx` | `task-duck:upx` | ~33 MB | UPX-compressed Bun — smaller, may trigger AV scanners |
+
+```bash
+# Standard image (AV-safe, recommended for enterprise)
+docker build --target production -t task-duck:latest .
+
+# UPX-compressed image (smaller, for personal use)
+docker build --target upx -t task-duck:upx .
+```
+
+Building `--target production` skips the UPX compressor stage entirely — Docker only pulls stages reachable from the selected target.
+
+**SlimToolkit** (optional): Further reduce the standard image to ~60–80 MB while staying AV-compatible:
+
+```bash
+slim build task-duck:latest \
+  --target task-duck:slim \
+  --http-probe-cmd /api/health \
+  --expose 3000
+```
+
+An interactive build script offers a TUI menu for building variants and running Trivy scans:
+
+```bash
+bash docker-build.sh
+```
+
+All images run as non-root user with a health check on `/api/health`.
 
 ## Environment Variables
 
@@ -340,6 +372,39 @@ Every push to `main` builds a multi-arch Docker image (amd64 + arm64) and pushes
 | Push to `main` | `latest`, `main`, `sha-<commit>` |
 | Tag `v1.2.3` | `1.2.3`, `1.2`, `sha-<commit>` |
 | Pull request | Build only (no push) |
+
+### Docker Hardening
+
+The Docker setup includes four layers of hardening, reusable as a reference for other projects:
+
+**Dockerfile**
+
+- **tini as PID 1** — forwards SIGTERM so `docker stop` completes in <2s instead of waiting 10s for SIGKILL
+- **OCI metadata labels** — `org.opencontainers.image.*` labels populated via build-args (`BUILD_DATE`, `VCS_REF`, `VERSION`)
+- **File permission lockdown** — `chmod 555` on `/app/dist` and `/usr/local/bin/bun` (read+execute, no write)
+- **Package manager removal** — `apk-tools` purged after setup, preventing `apk add` inside running containers
+- **Non-root user** — runs as `appuser` with no elevated privileges
+
+**Compose**
+
+- `read_only: true` — immutable root filesystem at runtime
+- `tmpfs: /tmp:noexec,nosuid,size=64m` — writable temp dir without binary execution
+- `cap_drop: [ALL]` — no Linux capabilities (port 3000 > 1024, none needed)
+- `no-new-privileges: true` — prevents setuid/setgid escalation
+- `pids_limit: 64` — fork bomb protection
+- `logging: max-size 10m, max-file 3` — caps logs at 30MB total
+
+**CI/CD**
+
+- **Trivy vulnerability scan** — blocks pushes on HIGH/CRITICAL CVEs (`ignore-unfixed: true`)
+- **SARIF upload** — scan results appear in GitHub Security tab
+- **OCI build-args** — commit SHA, timestamp, and version baked into image labels
+
+**Build Script**
+
+- Interactive TUI menu (`bash docker-build.sh`) — build production, UPX, slim, or all variants
+- Trivy scanning with fallback to `docker run aquasec/trivy` if CLI not installed
+- OCI build-args auto-populated from git and package.json
 
 ### Reverse Proxy (Nginx Proxy Manager)
 

@@ -17,6 +17,30 @@ services:
       retries: 3
     networks:
       - task-duck-net
+    # ── Security hardening ──
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # ── Resource limits ──
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 64M
+    pids_limit: 64
+    # ── Logging limits ──
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   task-duck-net:
